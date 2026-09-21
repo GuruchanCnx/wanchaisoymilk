@@ -1,0 +1,13 @@
+{
+  "name": "Wanchai Soy — Walai",
+  "short_name": "Wanchai Soy",
+  "description": "Fresh soy milk, cow milk, ginger tea. Chiang Mai.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FAF3E3",
+  "theme_color": "#2B4D3E",
+  "lang": "th",
+  "icons": [
+    { "src": "/favicon.svg", "type": "image/svg+xml", "sizes": "any", "purpose": "any" }
+  ]
+}
