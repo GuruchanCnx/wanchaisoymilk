@@ -1,0 +1,6 @@
+{
+  "name": "วันใจ Soy · Wanchai Soy",
+  "description": "วันใจ Soy — น้ำเต้าหู้ นมวัว น้ำขิง สดใหม่ทุกเช้า | Fresh soy milk, cow milk, ginger tea in Chiang Mai",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
