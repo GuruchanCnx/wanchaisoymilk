@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown } from 'lucide-react';
+import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -20,6 +20,13 @@ export default function Home() {
   const [loading, setLoading] = useState(products.length === 0);
   const [modal, setModal] = useState<Product | null>(null);
   const [settings, setSettings] = useState<Record<string, any>>(() => cacheGet('settings', 60_000) || {});
+  const [copiedCoords, setCopiedCoords] = useState(false);
+
+  // Exact coordinates: 18°46'47.4"N 98°59'04.1"E (Lat: 18.779833, Lng: 98.984472)
+  const coordsText = '18°46\'47.4"N 98°59\'04.1"E';
+  const osmUrl = 'https://www.openstreetmap.org/?mlat=18.779833&mlon=98.984472#map=19/18.779833/98.984472';
+  const directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=18.779833,98.984472';
+  const osmEmbedUrl = 'https://www.openstreetmap.org/export/embed.html?bbox=98.981472%2C18.776833%2C98.987472%2C18.782833&layer=mapnik&marker=18.779833%2C98.984472';
 
   const fetchAll = useCallback(async () => {
     try {
@@ -38,11 +45,44 @@ export default function Home() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  const copyCoordinates = () => {
+    navigator.clipboard.writeText(coordsText);
+    setCopiedCoords(true);
+    setTimeout(() => setCopiedCoords(false), 2000);
+  };
+
   const drinks = products.filter((p) => p.category === 'drinks');
   const snacks = products.filter((p) => p.category === 'snacks');
   const bestsellers = products.filter((p) => ['soy-milk', 'cow-milk', 'ginger-tea'].includes(p.slug));
 
   const shopStatus = settings.shop_status || 'open';
+  const shopAddress = lang === 'th'
+    ? settings.address_th || '15/4 ซอย 2 ถนนวัวลาย ตำบลหายยา อำเภอเมือง เชียงใหม่ 50100'
+    : settings.address_en || '15/4 Soi 2, Walai Rd, Haiya, Mueang Chiang Mai 50100';
+  const shopHours = lang === 'th'
+    ? settings.open_hours_th || 'ทุกวัน 06:00 – 11:00 น.'
+    : settings.open_hours_en || 'Daily 06:00 – 11:00 AM';
+  const shopPhone = settings.shop_phone || '053-000-000';
+  const heroWallPicture = settings.hero_image_url || '/images/hero.jpg';
+
+  // Pure localized ticker phrases with NO mixed language
+  const tickerPhrases = lang === 'th'
+    ? [
+        'นมถั่วเหลือง ทำสดใหม่ทุกเช้า',
+        'น้ำเต้าหู้สูตรดั้งเดิม บรรจุถุงเย็นสบาย',
+        'ปาท่องโก๋ ซาลาเปาร้อน ชิ้นละ ฿3',
+        'นมวัวสดแท้ ส่งตรงจากฟาร์ม',
+        'น้ำขิงแก่ต้มสด หวานหอมไล่ลม',
+        'นำภาชนะมาเอง ลดทันที 2 บาท',
+      ]
+    : [
+        'Fresh soy milk made fresh every morning',
+        'Traditional Chiang Mai clear-bag milk',
+        'Crispy Patongko & steamed Salapao ฿3 each',
+        'Fresh farm cow milk boiled warm',
+        'Spicy aromatic boiled ginger tea',
+        'Bring your own container: save 2 baht',
+      ];
 
   return (
     <div className="min-h-screen pb-24">
@@ -56,10 +96,14 @@ export default function Home() {
         { id: 'visit', label_th: 'มาหาเรา', label_en: 'Visit' },
       ]} />
 
-      {/* Hero */}
+      {/* Hero Section with Editable Hero Wall Picture */}
       <section className="relative overflow-hidden border-b border-forest/15">
         <div className="absolute inset-0">
-          <img src="/images/hero.jpg" alt="" className="w-full h-full object-cover opacity-25" />
+          <img
+            src={heroWallPicture}
+            alt="Wanchai Soy Hero Wall"
+            className="w-full h-full object-cover opacity-30"
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-cream/70 via-cream/40 to-cream" />
         </div>
         <div className="relative mx-auto max-w-6xl px-4 pt-8 pb-10 sm:pt-14 sm:pb-16">
@@ -88,30 +132,35 @@ export default function Home() {
                 {t.tapToOrder} <ChevronDown className="h-4 w-4" />
               </button>
               <a
-                href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai"
-                target="_blank" rel="noreferrer"
+                href={directionsUrl}
+                target="_blank"
+                rel="noreferrer"
                 className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs"
               >
-                <MapPin className="h-4 w-4" /> {t.directions}
+                <MapPin className="h-4 w-4 text-terracotta" /> {t.directions}
               </a>
               <Link to="/checkout" className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition">
                 {t.walkupOrder}
               </Link>
             </div>
 
-            <div className="mt-6 inline-flex items-center gap-2 text-xs sm:text-sm liquid-pill rounded-full px-3.5 py-1.5 text-ink-muted">
-              <MapPin className="h-3.5 w-3.5 text-terracotta" /> {t.address} · <span className="text-forest font-semibold">{t.pickupOnly}</span>
+            <div className="mt-6 inline-flex flex-wrap items-center gap-2 text-xs sm:text-sm liquid-pill rounded-full px-3.5 py-1.5 text-ink-muted">
+              <MapPin className="h-3.5 w-3.5 text-terracotta shrink-0" />
+              <span>{shopAddress}</span>
+              <span className="text-forest font-semibold">· {t.pickupOnly}</span>
             </div>
           </motion.div>
         </div>
 
-        {/* Ticker */}
+        {/* Pure localized Marquee Ticker */}
         <div className="relative border-t border-forest/15 bg-forest text-cream overflow-hidden">
           <div className="flex whitespace-nowrap marquee py-2.5 text-xs font-semibold tracking-wide">
             {Array(2).fill(0).map((_, k) => (
               <span key={k} className="flex items-center">
-                {['นมถั่วเหลือง ต้นตำรับ', 'Made this morning · clear-bag tradition', 'ปาท่องโก ซาลาเปา ชิ้นละ ฿3', 'Patongko & Salapao · ฿3 each', 'เอาภาชนะมาเอง ลด 2 บาท', 'BYO container: – ฿2'].map((s, i) => (
-                  <span key={i} className="px-6 flex items-center gap-3"><Sparkles className="h-3.5 w-3.5 text-honey" /> {s}</span>
+                {tickerPhrases.map((phrase, i) => (
+                  <span key={i} className="px-6 flex items-center gap-3">
+                    <Sparkles className="h-3.5 w-3.5 text-honey" /> {phrase}
+                  </span>
                 ))}
               </span>
             ))}
@@ -125,7 +174,7 @@ export default function Home() {
 
         {/* Bestsellers */}
         <section id="bestsellers" className="mb-12">
-          <SectionHeading eyebrow={lang === 'th' ? 'ขายดีที่สุด' : 'Fastest movers'} title={lang === 'th' ? 'อันดับหนึ่งของเจ้า' : 'Our bestsellers'} />
+          <SectionHeading eyebrow={lang === 'th' ? 'ขายดีที่สุด' : 'Fastest movers'} title={lang === 'th' ? 'อันดับหนึ่งของร้าน' : 'Our bestsellers'} />
           {loading ? <SkeletonGrid /> : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 apple-duo-grid">
               {bestsellers.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
@@ -135,7 +184,7 @@ export default function Home() {
 
         {/* Drinks */}
         <section id="drinks" className="mb-12">
-          <SectionHeading eyebrow="🥛" title={t.drinks} sub={lang === 'th' ? 'เลือกภาชนะ · ความหวาน · ร้อน/เย็น' : 'Choose vessel · sweetness · hot/cold'} />
+          <SectionHeading eyebrow="🥛" title={t.drinks} sub={lang === 'th' ? 'เลือกภาชนะ · ความหวาน · ร้อนหรือเย็น' : 'Choose vessel · sweetness · hot or cold'} />
           {loading ? <SkeletonGrid /> : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
               {drinks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
@@ -145,7 +194,7 @@ export default function Home() {
 
         {/* Snacks */}
         <section id="snacks" className="mb-12">
-          <SectionHeading eyebrow="⚡" title={t.snacks} sub={lang === 'th' ? 'บวกเข้ากับเครื่องดื่ม — ชิ้นละ ฿3' : 'Grab-and-go add-ons — ฿3 each'} />
+          <SectionHeading eyebrow="⚡" title={t.snacks} sub={lang === 'th' ? 'ทานคู่กับเครื่องดื่ม — ชิ้นละ ฿3' : 'Grab-and-go add-ons — ฿3 each'} />
           {loading ? <SkeletonGrid /> : (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
               {snacks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
@@ -167,10 +216,14 @@ export default function Home() {
             </div>
           </div>
           <div className="rounded-3xl liquid-glass border border-white/60 p-6 sm:p-8 shadow-sm apple-duo-col-2">
-            <div className="text-xs uppercase tracking-widest text-ink-muted font-bold">{lang === 'th' ? 'ชุดต่อไปทำเมื่อ' : 'Next batches today'}</div>
-            <h3 className="font-display italic font-bold text-2xl mt-1 text-forest">{lang === 'th' ? 'พร้อมเสิร์ฟเมื่อ' : 'When we serve'}</h3>
+            <div className="text-xs uppercase tracking-widest text-ink-muted font-bold">{lang === 'th' ? 'รอบการต้มสดวันนี้' : 'Next batches today'}</div>
+            <h3 className="font-display italic font-bold text-2xl mt-1 text-forest">{lang === 'th' ? 'เวลาพร้อมเสิร์ฟ' : 'When we serve'}</h3>
             <ul className="mt-4 space-y-3">
-              {[['06:00', lang === 'th' ? 'นมถั่วชุดแรก' : 'First soy batch'], ['07:30', lang === 'th' ? 'นมวัวสด + ซาลาเปาออกเตา' : 'Fresh cow milk + salapao out of steamer'], ['09:00', lang === 'th' ? 'น้ำขิงร้อนชุดใหม่' : 'Fresh ginger tea']].map(([time, label]) => (
+              {[
+                ['06:00', lang === 'th' ? 'น้ำเต้าหู้หม้อแรก' : 'First soy milk batch'],
+                ['07:30', lang === 'th' ? 'นมวัวสดต้มร้อน + ซาลาเปาพร้อมเสิร์ฟ' : 'Fresh cow milk + hot steamed salapao'],
+                ['09:00', lang === 'th' ? 'น้ำขิงต้มสดชุดใหม่' : 'Fresh boiled ginger tea'],
+              ].map(([time, label]) => (
                 <li key={time} className="flex items-center gap-3">
                   <div className="h-10 w-16 rounded-xl bg-forest text-cream flex items-center justify-center font-mono font-bold text-xs shadow-xs">{time}</div>
                   <div className="font-thai text-ink text-sm font-medium">{label}</div>
@@ -185,49 +238,150 @@ export default function Home() {
           <OrderHistory />
         </section>
 
-        {/* Visit */}
+        {/* Visit Section with Accurate Coordinates 18°46'47.4"N 98°59'04.1"E and OSM Map */}
         <section id="visit" className="mb-12">
-          <SectionHeading eyebrow={lang === 'th' ? 'มาหาเรา' : 'Come visit'} title={lang === 'th' ? 'สาขาเดียว — หน้าม.ช.เชียงใหม่' : 'One shop — near CMU'} />
-          <div className="rounded-3xl overflow-hidden liquid-glass border border-white/60 grid md:grid-cols-2 shadow-sm apple-duo-split">
-            <div className="p-6 sm:p-8 apple-duo-col-1">
-              <div className="font-display italic font-bold text-2xl text-forest">Wanchai Soy</div>
-              <div className="font-thai text-ink mt-1 text-sm">{t.address}</div>
-              <ul className="mt-4 space-y-2.5 text-xs text-ink">
-                <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-terracotta" /> {lang === 'th' ? 'ทุกวัน 06:00 – 11:00' : 'Daily 06:00 – 11:00'}</li>
-                <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-terracotta" /> 053-000-000</li>
-                <li className="flex items-center gap-2"><Instagram className="h-4 w-4 text-terracotta" /> @wanchai.soy</li>
-              </ul>
-              <div className="mt-5 flex flex-wrap gap-2.5">
-                <a href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai" target="_blank" rel="noreferrer" className="h-11 px-5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-forest-dark transition active:scale-95">
+          <SectionHeading
+            eyebrow={lang === 'th' ? 'แผนที่และพิกัดร้าน' : 'Location & Directions'}
+            title={lang === 'th' ? 'ร้านวันใจ Soy · ถนนวัวลาย' : 'Wanchai Soy · Walai Road'}
+            sub={lang === 'th' ? 'พิกัดพิกัดชัดเจน 18°46\'47.4"N 98°59\'04.1"E' : 'Accurate GPS: 18°46\'47.4"N 98°59\'04.1"E'}
+          />
+          <div className="rounded-3xl overflow-hidden liquid-glass border border-white/60 grid lg:grid-cols-12 shadow-sm apple-duo-split">
+            {/* Left: Contact Info & Action Buttons (5 cols) */}
+            <div className="p-6 sm:p-8 lg:col-span-5 apple-duo-col-1 flex flex-col justify-between">
+              <div>
+                <div className="font-display italic font-bold text-3xl text-forest">Wanchai Soy</div>
+                <div className="font-thai text-ink mt-2 text-sm leading-relaxed">{shopAddress}</div>
+
+                <div className="mt-3.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-forest/10 border border-forest/15 font-mono text-xs text-forest">
+                  <MapPin className="h-3.5 w-3.5 text-terracotta shrink-0" />
+                  <span className="font-bold">{coordsText}</span>
+                  <button
+                    onClick={copyCoordinates}
+                    className="ml-1 p-1 rounded-md hover:bg-forest/20 text-forest transition"
+                    title={lang === 'th' ? 'คัดลอกพิกัด' : 'Copy coordinates'}
+                  >
+                    {copiedCoords ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
+
+                <ul className="mt-5 space-y-3 text-xs text-ink font-medium">
+                  <li className="flex items-center gap-2.5">
+                    <Clock className="h-4 w-4 text-terracotta shrink-0" />
+                    <span>{shopHours}</span>
+                  </li>
+                  <li className="flex items-center gap-2.5">
+                    <Phone className="h-4 w-4 text-terracotta shrink-0" />
+                    <a href={`tel:${shopPhone.replace(/[^0-9+]/g, '')}`} className="hover:underline text-forest font-bold">
+                      {shopPhone}
+                    </a>
+                  </li>
+                </ul>
+
+                {/* Social Media & Platforms */}
+                <div className="mt-6 pt-4 border-t border-forest/10">
+                  <div className="text-[11px] font-bold text-forest uppercase tracking-wider mb-2">
+                    {lang === 'th' ? 'ช่องทางโซเชียลมีเดีย' : 'Social Platforms'}
+                  </div>
+                  <div className="flex flex-wrap gap-2 text-xs">
+                    {settings.tiktok_url && (
+                      <a
+                        href={settings.tiktok_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-8 px-3 rounded-full liquid-pill text-forest flex items-center gap-1.5 hover:bg-forest/10 transition"
+                      >
+                        <span>TikTok</span>
+                      </a>
+                    )}
+                    {settings.facebook_url && (
+                      <a
+                        href={settings.facebook_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-8 px-3 rounded-full liquid-pill text-forest flex items-center gap-1.5 hover:bg-forest/10 transition"
+                      >
+                        <span>Facebook</span>
+                      </a>
+                    )}
+                    {settings.instagram_url && (
+                      <a
+                        href={settings.instagram_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="h-8 px-3 rounded-full liquid-pill text-forest flex items-center gap-1.5 hover:bg-forest/10 transition"
+                      >
+                        <Instagram className="h-3.5 w-3.5 text-terracotta" />
+                        <span>Instagram</span>
+                      </a>
+                    )}
+                    {settings.line_id && (
+                      <div className="h-8 px-3 rounded-full liquid-pill text-forest flex items-center gap-1 font-mono text-[11px]">
+                        <span className="font-bold text-emerald-600">LINE:</span> {settings.line_id}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-6 pt-4 border-t border-forest/10 flex flex-wrap gap-2.5">
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-11 px-5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-forest-dark transition active:scale-95"
+                >
                   <MapPin className="h-4 w-4" /> {t.directions}
                 </a>
-                <a href="tel:+66530000000" className="h-11 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95">
-                  <Phone className="h-4 w-4" /> {t.callShop}
+                <a
+                  href={osmUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="h-11 px-4.5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-1.5 active:scale-95"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  {lang === 'th' ? 'เปิดแผนที่ OSM' : 'Open in OSM'}
+                </a>
+                <a
+                  href={`tel:${shopPhone.replace(/[^0-9+]/g, '')}`}
+                  className="h-11 px-4.5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-1.5 active:scale-95"
+                >
+                  <Phone className="h-3.5 w-3.5" /> {t.callShop}
                 </a>
               </div>
             </div>
-            <div className="bg-forest text-cream p-6 sm:p-8 relative overflow-hidden apple-duo-col-2">
-              <div className="absolute inset-0 opacity-20">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(232,180,74,0.4),transparent_40%)]" />
+
+            {/* Right: Embedded OpenStreetMap showing exact 18°46'47.4"N 98°59'04.1"E pin (7 cols) */}
+            <div className="lg:col-span-7 p-4 sm:p-6 bg-forest/5 flex flex-col justify-between apple-duo-col-2">
+              <div className="rounded-2xl overflow-hidden border border-forest/20 shadow-md bg-white">
+                <iframe
+                  title="OpenStreetMap Location 18°46'47.4N 98°59'04.1E"
+                  width="100%"
+                  height="320"
+                  className="w-full h-72 sm:h-80 border-0"
+                  src={osmEmbedUrl}
+                  loading="lazy"
+                />
               </div>
-              <div className="relative">
-                <div className="text-xs uppercase tracking-widest text-honey font-bold">{lang === 'th' ? 'สิ่งที่ขายดี' : 'Bestsellers'}</div>
-                <ul className="mt-3 space-y-1.5 font-display italic font-bold text-2xl">
-                  <li>— {lang === 'th' ? 'น้ำเต้าหู้' : 'Soy milk (bag)'}</li>
-                  <li>— {lang === 'th' ? 'นมวัวสด' : 'Fresh cow milk'}</li>
-                  <li>— {lang === 'th' ? 'น้ำขิง' : 'Ginger tea'}</li>
-                </ul>
-                <div className="mt-6 text-cream/80">
-                  <span className="text-xs uppercase tracking-wider font-semibold">{lang === 'th' ? 'ซาลาเปา · ปาท่องโก' : 'Salapao · Patongko'}</span>
-                  <div className="font-display italic font-bold text-3xl text-honey mt-0.5">฿3 {lang === 'th' ? '/ชิ้น' : 'each'}</div>
-                </div>
+              <div className="mt-3 flex items-center justify-between text-[11px] text-ink-muted">
+                <span>
+                  {lang === 'th' ? 'แผนที่ดาวเทียม OpenStreetMap พิกัดร้านวันใจ' : 'OpenStreetMap exact location pin'}
+                </span>
+                <a
+                  href={osmUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-forest font-bold underline hover:text-terracotta flex items-center gap-1"
+                >
+                  {lang === 'th' ? 'ดูแผนที่ขนาดใหญ่' : 'View larger map'} <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
           </div>
         </section>
 
         <footer className="pt-6 pb-6 text-center text-xs text-ink-muted">
-          © Wanchai Soy · 15/4 Soi 2 Walai Rd, Haiya, Muang, Chiang Mai ·
+          © Wanchai Soy · {shopAddress} · {coordsText} ·
           <Link to="/admin" className="ml-2 underline hover:text-forest">{t.admin}</Link>
         </footer>
       </main>

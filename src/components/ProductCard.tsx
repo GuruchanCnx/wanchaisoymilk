@@ -36,7 +36,7 @@ export default function ProductCard({ product, onTap }: { product: Product; onTa
         {soldOut && (
           <div className="absolute inset-0 bg-forest-dark/45 backdrop-blur-[3px] flex flex-col items-center justify-center p-3 text-center">
             <div className="px-3.5 py-1.5 rounded-full bg-chili text-cream text-xs font-bold shadow-md">
-              {lang === 'th' ? 'สินค้าหมด (Out of Stock)' : 'Out of Stock'}
+              {lang === 'th' ? 'สินค้าหมด' : 'Out of Stock'}
             </div>
             {product.next_batch_time && (
               <div className="text-[11px] text-cream font-medium mt-1.5 bg-black/40 px-2.5 py-0.5 rounded-full backdrop-blur-xs">

@@ -20,6 +20,11 @@ import {
   AlertCircle,
   ExternalLink,
   Sparkles,
+  MapPin,
+  Clock,
+  Phone,
+  Share2,
+  Check,
 } from 'lucide-react';
 import type { Product, Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -162,9 +167,9 @@ export default function Admin() {
               [
                 ['products', t.products, Package],
                 ['orders', t.orders, ClipboardList],
-                ['migration', 'Supabase → Firestore', Database],
-                ['emails', 'Automated Emails', Mail],
-                ['settings', lang === 'th' ? 'ตั้งค่าร้าน' : 'Settings', Store],
+                ['migration', lang === 'th' ? 'ย้ายฐานข้อมูล' : 'Database Migration', Database],
+                ['emails', lang === 'th' ? 'อีเมลอัตโนมัติ' : 'Automated Emails', Mail],
+                ['settings', lang === 'th' ? 'ตั้งค่าร้าน & ข้อมูล' : 'Shop Settings', Store],
               ] as const
             ).map(([k, l, Ic]) => (
               <button
@@ -433,8 +438,8 @@ function ProductEditor({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-forest/60 backdrop-blur-md flex items-center justify-center p-3">
-      <div className="bg-cream w-full max-w-3xl rounded-4xl overflow-hidden shadow-2xl border border-white/60 max-h-[92vh] flex flex-col liquid-specular">
+    <div className="fixed inset-0 z-50 bg-forest/60 backdrop-blur-md flex items-center justify-center p-3 duo-modal-overlay">
+      <div className="bg-cream w-full max-w-3xl rounded-4xl overflow-hidden shadow-2xl border border-white/60 max-h-[92vh] flex flex-col liquid-specular duo-segment-center">
         <div className="px-6 py-4 flex items-center justify-between border-b border-forest/10 liquid-glass">
           <div>
             <div className="font-display italic font-bold text-xl text-forest">
@@ -730,12 +735,8 @@ function OrdersTab() {
             }`}
           >
             {k === 'active'
-              ? lang === 'th'
-                ? 'ที่กำลังทำ (Active)'
-                : 'Active'
-              : lang === 'th'
-              ? 'ทั้งหมด (All)'
-              : 'All'}
+              ? (lang === 'th' ? 'ที่กำลังทำ' : 'Active')
+              : (lang === 'th' ? 'ทั้งหมด' : 'All')}
           </button>
         ))}
       </div>
@@ -787,11 +788,13 @@ function OrdersTab() {
 
             <div className="mt-2 text-xs text-ink-muted flex flex-wrap items-center gap-2">
               <span>
-                Pickup: <b>{o.pickup_time}</b>
+                {lang === 'th' ? 'เวลารับของ:' : 'Pickup:'} <b>{o.pickup_time}</b>
               </span>
               <span>·</span>
               <span>
-                {o.payment_method === 'promptpay' ? 'PromptPay Thai QR' : 'Cash'} · {o.payment_status}
+                {o.payment_method === 'promptpay'
+                  ? (lang === 'th' ? 'พร้อมเพย์' : 'PromptPay QR')
+                  : (lang === 'th' ? 'เงินสด' : 'Cash')} · {o.payment_status}
               </span>
               {o.notes && <span className="italic">· {o.notes}</span>}
             </div>
@@ -804,7 +807,7 @@ function OrdersTab() {
                   className="h-9 px-4 rounded-full bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition flex items-center gap-1"
                 >
                   <Mail className="h-3.5 w-3.5" />
-                  Mark paid & Send Email
+                  {lang === 'th' ? 'ชำระแล้ว & ส่งใบเสร็จ' : 'Mark paid & Send Receipt'}
                 </button>
               )}
               {['pending', 'paid'].includes(o.status) && (
@@ -812,7 +815,7 @@ function OrdersTab() {
                   onClick={() => update(o.id, { status: 'preparing' })}
                   className="h-9 px-4 rounded-full bg-terracotta text-cream text-xs font-bold hover:bg-terracotta-dark transition"
                 >
-                  Start prep
+                  {lang === 'th' ? 'เริ่มเตรียม' : 'Start prep'}
                 </button>
               )}
               {o.status !== 'ready' && o.status !== 'done' && (
@@ -821,7 +824,7 @@ function OrdersTab() {
                   className="h-9 px-4 rounded-full bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition flex items-center gap-1.5 shadow-sm"
                 >
                   <Bell className="h-3.5 w-3.5 text-honey" />
-                  {t.markReady} (FCM Push)
+                  {lang === 'th' ? 'พร้อมรับ (ส่งแจ้งเตือน)' : `${t.markReady} (Push)`}
                 </button>
               )}
               {o.status !== 'done' && (
@@ -1211,67 +1214,409 @@ function EmailsTab() {
 }
 
 function SettingsTab() {
-  const { lang } = useLang();
+  const { lang, t } = useLang();
   const [settings, setSettings] = useState<Record<string, any>>({});
+  const [loading, setLoading] = useState(true);
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const heroFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     fetch('/api/settings')
       .then((r) => r.json())
-      .then((d) => setSettings(d || {}));
+      .then((d) => {
+        setSettings(d || {});
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   }, []);
 
   const put = async (key: string, value: any) => {
     setSettings((s) => ({ ...s, [key]: value }));
-    await fetch('/api/settings', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ key, value }),
-    });
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key, value }),
+      });
+      setSaveStatus(lang === 'th' ? 'บันทึกเรียบร้อย' : 'Saved');
+      setTimeout(() => setSaveStatus(null), 1800);
+    } catch (e) {
+      console.error('Failed to update setting', e);
+    }
   };
 
+  const handleHeroFileUpload = async (file: File) => {
+    if (!file) return;
+    setUploadingHero(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.url) {
+        put('hero_image_url', data.url);
+      }
+    } catch (err) {
+      console.error('Hero file upload error:', err);
+    } finally {
+      setUploadingHero(false);
+    }
+  };
+
+  const currentHero = settings.hero_image_url || '/images/hero.jpg';
+  const coords = settings.coordinates_text || '18°46\'47.4"N 98°59\'04.1"E';
+  const osmTestUrl = 'https://www.openstreetmap.org/?mlat=18.779833&mlon=98.984472#map=19/18.779833/98.984472';
+  const dirTestUrl = 'https://www.google.com/maps/dir/?api=1&destination=18.779833,98.984472';
+
+  if (loading) {
+    return (
+      <div className="liquid-glass p-8 rounded-3xl text-center text-ink-muted text-sm">
+        <RefreshCw className="h-6 w-6 text-forest animate-spin mx-auto mb-2" />
+        {t.loading}
+      </div>
+    );
+  }
+
   return (
-    <div className="grid gap-4 max-w-2xl rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
-      <F label={lang === 'th' ? 'สถานะร้าน' : 'Shop status'}>
-        <div className="flex gap-2">
-          {(['open', 'on_break', 'closed'] as const).map((k) => (
-            <button
-              key={k}
-              onClick={() => put('shop_status', k)}
-              className={`h-11 px-5 rounded-full text-xs font-bold border transition ${
-                settings.shop_status === k
-                  ? 'border-forest bg-forest text-cream shadow-sm'
-                  : 'border-forest/15 bg-white/70 text-forest hover:bg-forest/5'
-              }`}
-            >
-              {k}
-            </button>
-          ))}
+    <div className="space-y-6 max-w-4xl">
+      {saveStatus && (
+        <div className="fixed top-20 right-6 z-50 px-4 py-2 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-1.5 shadow-lg animate-bounce">
+          <Check className="h-3.5 w-3.5 text-honey" /> {saveStatus}
         </div>
-      </F>
-      <F label={lang === 'th' ? 'เวลาทำการวันนี้' : "Today's hours"}>
-        <input
-          value={settings.hours_today || ''}
-          onChange={(e) => put('hours_today', e.target.value)}
-          placeholder="06:00 – 11:00"
-          className={inp}
-        />
-      </F>
-      <F label="PromptPay number">
-        <input
-          value={settings.promptpay_number || ''}
-          onChange={(e) => put('promptpay_number', e.target.value)}
-          placeholder="053-000-000"
-          className={inp}
-        />
-      </F>
-      <F label={lang === 'th' ? 'ข้อความประกาศหน้าร้าน' : 'Shop announcement'}>
-        <input
-          value={settings.announcement || ''}
-          onChange={(e) => put('announcement', e.target.value)}
-          placeholder="นมหมดเร็ว · last batch soon"
-          className={inp}
-        />
-      </F>
+      )}
+
+      {/* 1. Hero Wall Picture Editing */}
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <ImageIcon className="h-5 w-5 text-forest" />
+          <h3 className="font-display italic font-bold text-xl text-forest">
+            {lang === 'th' ? 'รูปภาพหน้าปก Hero (Hero Wall Picture)' : 'Hero Wall Picture'}
+          </h3>
+        </div>
+        <p className="text-xs text-ink-muted mb-4">
+          {lang === 'th'
+            ? 'ปรับเปลี่ยนรูปภาพส่วนหัวของเว็บแอป รองรับการอัปโหลดไฟล์จากเครื่อง หรือระบุ URL ได้ทันที'
+            : 'Change the hero wallpaper shown at the top of the homepage. Supports device file upload or direct URL.'}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-start">
+          {/* Live Preview */}
+          <div className="md:col-span-5 rounded-2xl overflow-hidden border border-forest/20 relative aspect-video bg-black/10 shadow-sm group">
+            <img
+              src={currentHero}
+              alt="Hero Preview"
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-3">
+              <span className="text-[11px] text-white font-mono font-semibold">
+                {lang === 'th' ? 'ตัวอย่างภาพหน้าปก' : 'Live Cover Preview'}
+              </span>
+            </div>
+          </div>
+
+          {/* Upload Controls & URL */}
+          <div className="md:col-span-7 space-y-3">
+            <input
+              type="file"
+              ref={heroFileInputRef}
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleHeroFileUpload(file);
+              }}
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => heroFileInputRef.current?.click()}
+                disabled={uploadingHero}
+                className="h-10 px-4 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-1.5 hover:bg-forest-dark transition active:scale-95 shadow-sm disabled:opacity-50"
+              >
+                <Upload className="h-3.5 w-3.5" />
+                {uploadingHero
+                  ? lang === 'th'
+                    ? 'กำลังอัปโหลด...'
+                    : 'Uploading...'
+                  : lang === 'th'
+                  ? 'อัปโหลดภาพจากเครื่อง'
+                  : 'Upload Image File'}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => put('hero_image_url', '/images/hero.jpg')}
+                className="h-10 px-3.5 rounded-full liquid-pill text-forest text-xs font-semibold hover:bg-forest/10 transition"
+              >
+                {lang === 'th' ? 'รีเซ็ตเป็นภาพตั้งต้น' : 'Reset to Default'}
+              </button>
+            </div>
+
+            <div>
+              <label className="text-[11px] text-ink-muted font-semibold block mb-1">
+                {lang === 'th' ? 'หรือป้อน URL รูปภาพโดยตรง' : 'Or direct Image URL'}
+              </label>
+              <input
+                value={settings.hero_image_url || ''}
+                onChange={(e) => put('hero_image_url', e.target.value)}
+                placeholder="/images/hero.jpg"
+                className={inp}
+              />
+            </div>
+
+            {/* Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-ink-muted font-bold uppercase">
+                {lang === 'th' ? 'เลือกภาพแนะนำ:' : 'Presets:'}
+              </span>
+              {[
+                ['/images/hero.jpg', lang === 'th' ? 'ร้านวันใจ' : 'Default Shop'],
+                ['/images/soy-milk.jpg', lang === 'th' ? 'หม้อน้ำเต้าหู้' : 'Soy Milk Pot'],
+                ['/images/crullers.jpg', lang === 'th' ? 'ปาท่องโก๋' : 'Crispy Patongko'],
+                ['/images/cow-milk.jpg', lang === 'th' ? 'นมสดต้ม' : 'Farm Cow Milk'],
+              ].map(([url, lbl]) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => put('hero_image_url', url)}
+                  className="px-2.5 py-1 rounded-full text-[10px] bg-white/70 border border-forest/15 hover:bg-forest/10 font-thai font-semibold"
+                >
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Shop Location & OSM Map Details */}
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <MapPin className="h-5 w-5 text-terracotta" />
+          <h3 className="font-display italic font-bold text-xl text-forest">
+            {lang === 'th' ? 'ที่อยู่และพิกัดแผนที่ (Location & OSM Map)' : 'Location & OSM Map'}
+          </h3>
+        </div>
+        <p className="text-xs text-ink-muted mb-4">
+          {lang === 'th'
+            ? 'พิกัดเฉพาะเจาะจงที่ 18°46\'47.4"N 98°59\'04.1"E บนถนนวัวลาย ตำบลหายยา อำเภอเมือง เชียงใหม่ ไม่ปะปนกับโรงแรมหรือสถานที่ท่องเที่ยวอื่น'
+            : 'Exact location strictly at 18°46\'47.4"N 98°59\'04.1"E on Walai Road, Haiya, Chiang Mai with zero hotel or attraction association.'}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <F label={lang === 'th' ? 'ที่อยู่ร้าน (ภาษาไทย)' : 'Shop Address (Thai)'}>
+            <input
+              value={settings.address_th || ''}
+              onChange={(e) => put('address_th', e.target.value)}
+              placeholder="15/4 ซอย 2 ถนนวัวลาย ตำบลหายยา อำเภอเมือง เชียงใหม่ 50100"
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'ที่อยู่ร้าน (English)' : 'Shop Address (English)'}>
+            <input
+              value={settings.address_en || ''}
+              onChange={(e) => put('address_en', e.target.value)}
+              placeholder="15/4 Soi 2, Walai Rd, Haiya, Mueang Chiang Mai 50100"
+              className={inp}
+            />
+          </F>
+
+          <F label={lang === 'th' ? 'ข้อความพิกัด GPS' : 'GPS Coordinates Text'}>
+            <input
+              value={settings.coordinates_text || ''}
+              onChange={(e) => put('coordinates_text', e.target.value)}
+              placeholder="18°46'47.4&quot;N 98°59'04.1&quot;E"
+              className={inp}
+            />
+          </F>
+
+          <div className="flex items-end gap-2">
+            <a
+              href={osmTestUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="h-11 px-4 rounded-xl liquid-pill text-xs font-bold text-forest flex items-center gap-1.5 hover:bg-forest/10 transition"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              {lang === 'th' ? 'ทดสอบดูบน OSM' : 'Preview on OSM'}
+            </a>
+            <a
+              href={dirTestUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="h-11 px-4 rounded-xl bg-forest text-cream text-xs font-bold flex items-center gap-1.5 hover:bg-forest-dark transition"
+            >
+              <MapPin className="h-3.5 w-3.5 text-honey" />
+              {lang === 'th' ? 'ทดสอบเส้นทาง GPS' : 'Test GPS Nav'}
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Business Hours & Phone */}
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Clock className="h-5 w-5 text-forest" />
+          <h3 className="font-display italic font-bold text-xl text-forest">
+            {lang === 'th' ? 'เวลาทำการและเบอร์โทรศัพท์ (Hours & Contact)' : 'Hours & Phone'}
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-3">
+          <F label={lang === 'th' ? 'เวลาทำการ (ภาษาไทย)' : 'Business Hours (TH)'}>
+            <input
+              value={settings.open_hours_th || ''}
+              onChange={(e) => put('open_hours_th', e.target.value)}
+              placeholder="ทุกวัน 06:00 – 11:00 น."
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'เวลาทำการ (English)' : 'Business Hours (EN)'}>
+            <input
+              value={settings.open_hours_en || ''}
+              onChange={(e) => put('open_hours_en', e.target.value)}
+              placeholder="Daily 06:00 – 11:00 AM"
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'เวลาทำการวันนี้ (แถบสถานะ)' : "Today's Status Hours"}>
+            <input
+              value={settings.hours_today || ''}
+              onChange={(e) => put('hours_today', e.target.value)}
+              placeholder="06:00 – 11:00"
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'เบอร์โทรศัพท์ร้าน' : 'Shop Phone Number'}>
+            <input
+              value={settings.shop_phone || ''}
+              onChange={(e) => put('shop_phone', e.target.value)}
+              placeholder="053-000-000"
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'เบอร์พร้อมเพย์รับเงิน' : 'PromptPay Account'}>
+            <input
+              value={settings.promptpay_number || ''}
+              onChange={(e) => put('promptpay_number', e.target.value)}
+              placeholder="081-234-5678"
+              className={inp}
+            />
+          </F>
+          <F label={lang === 'th' ? 'ชื่อบัญชีพร้อมเพย์' : 'PromptPay Account Name'}>
+            <input
+              value={settings.promptpay_name || ''}
+              onChange={(e) => put('promptpay_name', e.target.value)}
+              placeholder="วันใจ Soy / Wanchai Soy"
+              className={inp}
+            />
+          </F>
+        </div>
+      </div>
+
+      {/* 4. Social Platforms (TikTok, Facebook, Instagram, LINE) */}
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Share2 className="h-5 w-5 text-terracotta" />
+          <h3 className="font-display italic font-bold text-xl text-forest">
+            {lang === 'th' ? 'ช่องทางโซเชียลมีเดีย (Social Platforms)' : 'Social Platforms'}
+          </h3>
+        </div>
+        <p className="text-xs text-ink-muted mb-4">
+          {lang === 'th'
+            ? 'ระบุลิงก์หรือไอดีบัญชีโซเชียลมีเดีย เช่น TikTok, Facebook, Instagram และ LINE'
+            : 'Configure URLs and handles for TikTok, Facebook, Instagram, and LINE.'}
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <F label="TikTok URL">
+            <input
+              value={settings.tiktok_url || ''}
+              onChange={(e) => put('tiktok_url', e.target.value)}
+              placeholder="https://www.tiktok.com/@wanchai.soy"
+              className={inp}
+            />
+          </F>
+          <F label="Facebook URL">
+            <input
+              value={settings.facebook_url || ''}
+              onChange={(e) => put('facebook_url', e.target.value)}
+              placeholder="https://www.facebook.com/wanchai.soy"
+              className={inp}
+            />
+          </F>
+          <F label="Instagram URL">
+            <input
+              value={settings.instagram_url || ''}
+              onChange={(e) => put('instagram_url', e.target.value)}
+              placeholder="https://www.instagram.com/wanchai.soy"
+              className={inp}
+            />
+          </F>
+          <F label="LINE ID">
+            <input
+              value={settings.line_id || ''}
+              onChange={(e) => put('line_id', e.target.value)}
+              placeholder="@wanchaisoy"
+              className={inp}
+            />
+          </F>
+        </div>
+      </div>
+
+      {/* 5. Shop Operational Status & Announcement */}
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
+        <div className="flex items-center gap-2 mb-1">
+          <Store className="h-5 w-5 text-forest" />
+          <h3 className="font-display italic font-bold text-xl text-forest">
+            {lang === 'th' ? 'สถานะร้านและข้อความประกาศ' : 'Shop Status & Announcement'}
+          </h3>
+        </div>
+
+        <div className="space-y-4 mt-3">
+          <F label={lang === 'th' ? 'สถานะหน้าร้านปัจจุบัน' : 'Current Shop Status'}>
+            <div className="flex gap-2">
+              {(['open', 'on_break', 'closed'] as const).map((k) => (
+                <button
+                  key={k}
+                  onClick={() => put('shop_status', k)}
+                  className={`h-11 px-5 rounded-full text-xs font-bold border transition ${
+                    settings.shop_status === k
+                      ? 'border-forest bg-forest text-cream shadow-sm'
+                      : 'border-forest/15 bg-white/70 text-forest hover:bg-forest/5'
+                  }`}
+                >
+                  {k === 'open'
+                    ? lang === 'th'
+                      ? 'เปิดร้าน (Open)'
+                      : 'Open'
+                    : k === 'on_break'
+                    ? lang === 'th'
+                      ? 'พักเบรก (On Break)'
+                      : 'On Break'
+                    : lang === 'th'
+                    ? 'ปิดร้าน (Closed)'
+                    : 'Closed'}
+                </button>
+              ))}
+            </div>
+          </F>
+
+          <F label={lang === 'th' ? 'ข้อความประกาศหน้าร้าน' : 'Shop Announcement'}>
+            <input
+              value={settings.announcement || ''}
+              onChange={(e) => put('announcement', e.target.value)}
+              placeholder={lang === 'th' ? 'นมสดต้มใหม่ใกล้หมด · รีบสั่งก่อนหมด' : 'Last batch boiled · order soon'}
+              className={inp}
+            />
+          </F>
+        </div>
+      </div>
     </div>
   );
 }

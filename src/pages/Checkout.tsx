@@ -28,7 +28,7 @@ export default function Checkout() {
   useEffect(() => { if (phone) localStorage.setItem('customer_phone', phone); }, [phone]);
   useEffect(() => { if (email) localStorage.setItem('customer_email', email); }, [email]);
 
-  const pickupTime = pickup === 'asap' ? (lang === 'th' ? 'ตอนนี้ (ASAP)' : 'ASAP') : pickupCustom;
+  const pickupTime = pickup === 'asap' ? (lang === 'th' ? 'ตอนนี้' : 'ASAP') : pickupCustom;
 
   const total = subtotal;
 
@@ -163,7 +163,7 @@ export default function Checkout() {
               <input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-12 rounded-xl border-2 border-forest/15 bg-cream-soft px-4 focus:outline-none focus:border-forest" placeholder="08x xxx xxxx" />
             </Field>
           </div>
-          <Field label={lang === 'th' ? 'อีเมลสำหรับรับใบเสร็จอัตโนมัติ (Automated Email Receipt)' : 'Email for Automated Receipt'}>
+          <Field label={lang === 'th' ? 'อีเมลสำหรับรับใบเสร็จอัตโนมัติ' : 'Email for Automated Receipt'}>
             <div className="relative">
               <input
                 type="email"
@@ -173,13 +173,13 @@ export default function Checkout() {
                 placeholder="your-email@example.com"
               />
               <span className="absolute right-3 top-3 text-[10px] bg-forest/10 text-forest font-semibold px-2 py-1 rounded-md">
-                Firebase Function
+                {lang === 'th' ? 'ระบบคลาวด์' : 'Firebase Function'}
               </span>
             </div>
           </Field>
           <Field label={t.pickupTime}>
             <div className="flex flex-wrap gap-2">
-              {[['asap', lang === 'th' ? 'ตอนนี้' : 'ASAP'], ['15', '+15 min'], ['30', '+30 min']].map(([v, l]) => (
+              {[['asap', lang === 'th' ? 'ตอนนี้' : 'ASAP'], ['15', lang === 'th' ? '+15 นาที' : '+15 min'], ['30', lang === 'th' ? '+30 นาที' : '+30 min']].map(([v, l]) => (
                 <button key={v} onClick={() => setPickup(v)} className={`h-11 px-4 rounded-full border-2 font-semibold text-sm ${pickup === v ? 'bg-forest text-cream border-forest' : 'bg-cream-soft text-ink border-forest/15'}`}>{l}</button>
               ))}
               <input type="time" value={pickup !== 'asap' && pickup !== '15' && pickup !== '30' ? pickup : ''} onChange={(e) => { setPickup(e.target.value); setPickupCustom(e.target.value); }} className="h-11 px-3 rounded-full border-2 border-forest/15 bg-cream-soft font-mono text-sm" />
@@ -230,7 +230,7 @@ export default function Checkout() {
                     className="mt-4 inline-flex items-center gap-2 h-11 px-5 rounded-full bg-forest text-cream font-bold text-sm shadow hover:bg-forest-dark active:scale-95 transition"
                   >
                     <Sparkles className="h-4 w-4 text-honey" />
-                    {lang === 'th' ? 'สร้างคิวอาร์โค้ดพร้อมเพย์ (Generate QR)' : 'Generate Payment QR'}
+                    {lang === 'th' ? 'สร้างคิวอาร์โค้ดพร้อมเพย์' : 'Generate Payment QR'}
                   </button>
                 </div>
               ) : (

@@ -64,7 +64,7 @@ export default function OrderModal({ product, onClose }: { product: Product; onC
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+        className="fixed inset-0 z-50 bg-ink/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 duo-modal-overlay"
       >
         <motion.div
           initial={{ y: 40, opacity: 0 }}
@@ -72,7 +72,7 @@ export default function OrderModal({ product, onClose }: { product: Product; onC
           exit={{ y: 40, opacity: 0 }}
           transition={{ type: 'spring', damping: 24, stiffness: 260 }}
           onClick={(e) => e.stopPropagation()}
-          className="w-full max-w-md bg-cream rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border-t-4 sm:border-4 border-forest max-h-[92dvh] flex flex-col"
+          className="w-full max-w-md bg-cream rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl border-t-4 sm:border-4 border-forest max-h-[92dvh] flex flex-col duo-segment-center"
         >
           <div className="relative shrink-0">
             <img src={product.image_url} alt={product.name_th} className="w-full h-40 object-cover" />

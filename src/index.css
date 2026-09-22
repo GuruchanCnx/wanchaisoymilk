@@ -168,6 +168,55 @@ section[id] { scroll-margin-top: 140px; }
 }
 
 /* =========================================================
+   iOS 27 Interactive Button Liquid-Glass Hover & Refraction
+   ========================================================= */
+button:not(:disabled),
+a.btn,
+.liquid-pill,
+.pos-btn {
+  position: relative;
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease, filter 0.2s ease;
+  overflow: hidden;
+}
+
+button:not(:disabled):hover,
+a.btn:hover,
+.liquid-pill:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow:
+    0 12px 28px -6px rgba(43, 77, 62, 0.16),
+    0 4px 12px -2px rgba(0, 0, 0, 0.06),
+    inset 0 1.5px 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+button:not(:disabled):active,
+a.btn:active,
+.liquid-pill:active {
+  transform: scale(0.975);
+}
+
+/* iOS 27 Liquid Glass specular light refraction on interactive buttons */
+button:not(:disabled)::after,
+.liquid-pill::after,
+a.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.38) 0%, rgba(255, 255, 255, 0.0) 45%, rgba(255, 255, 255, 0.18) 100%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.35s ease;
+  mix-blend-mode: overlay;
+}
+
+button:not(:disabled):hover::after,
+.liquid-pill:hover::after,
+a.btn:hover::after {
+  opacity: 1;
+}
+
+/* =========================================================
    Apple Duo Phone & Foldable Dual-Screen Layout Support
    ========================================================= */
 :root {
@@ -178,11 +227,28 @@ section[id] { scroll-margin-top: 140px; }
   --viewport-segment-width: env(viewport-segment-width 0 0, 50vw);
 }
 
+/* Foldable dual-screen active: reposition UI elements away from center hinge */
+.duo-screen-active .duo-nav-shell,
 @media (horizontal-viewport-segments: 2), (screen-spanning: single-fold-vertical) {
+  .duo-nav-shell {
+    display: flex !important;
+    justify-content: space-between !important;
+    padding-left: max(1.5rem, calc(env(safe-area-inset-left, 0px) + 1.25rem)) !important;
+    padding-right: max(1.5rem, calc(env(safe-area-inset-right, 0px) + 1.25rem)) !important;
+  }
+
+  .duo-nav-left {
+    margin-right: calc(env(viewport-segment-width 0 0, 50vw) * 0.1);
+  }
+
+  .duo-nav-right {
+    margin-left: auto;
+  }
+
   .duo-screen-layout {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    column-gap: 28px !important;
+    column-gap: 32px !important;
     width: 100% !important;
   }
   .duo-hinge-divider {
@@ -193,9 +259,116 @@ section[id] { scroll-margin-top: 140px; }
     position: absolute;
     top: 0;
     bottom: 0;
-    right: -14px;
+    right: -16px;
     width: 2px;
-    background: linear-gradient(180deg, transparent, rgba(43, 77, 62, 0.2), transparent);
+    background: linear-gradient(180deg, transparent, rgba(43, 77, 62, 0.25), transparent);
+  }
+}
+
+/* =========================================================
+   Dual-Screen Foldable Single-Segment Modal & Overlay Utility
+   Forces modals and overlays to center cleanly within a single
+   screen segment, preventing them from splitting across the hinge divider.
+   ========================================================= */
+
+/* Default overlay behavior on single screen displays */
+.duo-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.duo-segment-center,
+.duo-modal-segment {
+  width: 100%;
+  max-width: 32rem;
+  margin: auto;
+}
+
+/* Dual-Screen Foldables: Active Screen Spanning */
+@media (horizontal-viewport-segments: 2), (screen-spanning: single-fold-vertical) {
+  .duo-modal-overlay {
+    display: grid !important;
+    grid-template-columns: minmax(0, calc(env(viewport-segment-width 0 0, 50vw) - 12px)) var(--duo-hinge-width, 24px) minmax(0, calc(env(viewport-segment-width 1 0, 50vw) - 12px)) !important;
+    align-items: center !important;
+    justify-items: center !important;
+    padding: max(1rem, env(safe-area-inset-top, 16px)) max(1rem, env(safe-area-inset-right, 16px)) max(1rem, env(safe-area-inset-bottom, 16px)) max(1rem, env(safe-area-inset-left, 16px)) !important;
+    overflow-y: auto !important;
+  }
+
+  /* Force modal inside Segment 0 (Left screen) by default, completely away from the hinge */
+  .duo-modal-overlay > .duo-segment-center,
+  .duo-modal-overlay > .duo-modal-segment,
+  .duo-modal-overlay > .duo-segment-left {
+    grid-column: 1 !important;
+    max-width: min(calc(env(viewport-segment-width 0 0, 50vw) - 32px), 480px) !important;
+    margin: auto !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Force modal inside Segment 1 (Right screen) */
+  .duo-modal-overlay > .duo-segment-right {
+    grid-column: 3 !important;
+    max-width: min(calc(env(viewport-segment-width 1 0, 50vw) - 32px), 480px) !important;
+    margin: auto !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  }
+
+  /* Standalone single-segment utility when overlay wrapper does not use grid */
+  .duo-segment-center:not(.duo-modal-overlay > *) {
+    max-width: min(calc(env(viewport-segment-width 0 0, 50vw) - 32px), 480px) !important;
+    margin-left: auto !important;
+    margin-right: calc(env(viewport-segment-width 1 0, 50vw) + var(--duo-hinge-width, 24px) + 16px) !important;
+  }
+}
+
+/* Fallback for simulated dual-screen / DOM class .duo-screen-active or .duo-spanned */
+.duo-screen-active .duo-modal-overlay,
+.duo-spanned .duo-modal-overlay {
+  display: grid !important;
+  grid-template-columns: minmax(0, calc(50vw - 12px)) 24px minmax(0, calc(50vw - 12px)) !important;
+  align-items: center !important;
+  justify-items: center !important;
+  padding: 1rem !important;
+  overflow-y: auto !important;
+}
+
+.duo-screen-active .duo-modal-overlay > .duo-segment-center,
+.duo-spanned .duo-modal-overlay > .duo-segment-center,
+.duo-screen-active .duo-modal-overlay > .duo-modal-segment,
+.duo-spanned .duo-modal-overlay > .duo-modal-segment,
+.duo-screen-active .duo-modal-overlay > .duo-segment-left,
+.duo-spanned .duo-modal-overlay > .duo-segment-left {
+  grid-column: 1 !important;
+  max-width: min(calc(50vw - 32px), 480px) !important;
+  margin: auto !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+.duo-screen-active .duo-modal-overlay > .duo-segment-right,
+.duo-spanned .duo-modal-overlay > .duo-segment-right {
+  grid-column: 3 !important;
+  max-width: min(calc(50vw - 32px), 480px) !important;
+  margin: auto !important;
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Vertical Spanning (horizontal fold / clamshell fold) */
+@media (vertical-viewport-segments: 2), (screen-spanning: single-fold-horizontal) {
+  .duo-modal-overlay {
+    display: flex !important;
+    align-items: flex-end !important;
+    justify-content: center !important;
+    padding-bottom: max(1.5rem, calc(env(viewport-segment-height 1 0, 50vh) * 0.1)) !important;
+  }
+
+  .duo-segment-center,
+  .duo-modal-segment {
+    max-height: calc(env(viewport-segment-height 1 0, 50vh) - 24px) !important;
   }
 }
 

@@ -20,7 +20,7 @@ export default function StatusChip({
     return (
       <div className="inline-flex items-center gap-1.5 rounded-full bg-chili/90 text-cream px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur-xs">
         <AlertCircle className="h-3.5 w-3.5" />
-        <span>{lang === 'th' ? 'สินค้าหมด (Out of Stock)' : 'Out of Stock'}</span>
+        <span>{lang === 'th' ? 'สินค้าหมด' : 'Out of Stock'}</span>
         {next_batch_time ? <span className="opacity-90 font-normal">· {t.nextBatch} {next_batch_time}</span> : null}
       </div>
     );
@@ -39,7 +39,7 @@ export default function StatusChip({
     return (
       <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-600/90 text-cream px-2.5 py-1 text-xs font-bold shadow-sm backdrop-blur-xs animate-pulse">
         <Flame className="h-3.5 w-3.5 text-amber-200" />
-        <span>{lang === 'th' ? `เหลือน้อย (Low Stock) · เหลือ ${stock} ชิ้น` : `Low Stock · ${stock} left`}</span>
+        <span>{lang === 'th' ? `เหลือน้อย · เหลือ ${stock} ชิ้น` : `Low Stock · ${stock} left`}</span>
       </div>
     );
   }

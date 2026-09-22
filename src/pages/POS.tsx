@@ -1,16 +1,35 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Bell, Check, ChefHat, Package, Clock, XCircle, Volume2, VolumeX } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bell,
+  Check,
+  ChefHat,
+  Package,
+  Clock,
+  XCircle,
+  Volume2,
+  VolumeX,
+  Calculator,
+  RotateCcw,
+} from 'lucide-react';
 import type { Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { baht, shortId, timeAgo } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
+import PosDialPad from '../components/PosDialPad';
+import { useFoldableSpanning } from '../hooks/useFoldableSpanning';
 
 export default function POS() {
   const { t, lang } = useLang();
   const [orders, setOrders] = useState<Order[]>([]);
   const [sound, setSound] = useState(true);
   const [lastCount, setLastCount] = useState(0);
+  const [showDialPad, setShowDialPad] = useState(false);
+
+  // Hook that detects if the foldable device is spanned across two screens
+  // and automatically adds scroll-padding to the main content wrapper
+  const { isSpanned, isDualScreen, wrapperRef } = useFoldableSpanning<HTMLElement>();
 
   const load = useCallback(async () => {
     try {
@@ -47,51 +66,114 @@ export default function POS() {
   const ready = bucket(['ready']);
 
   return (
-    <div className="min-h-screen bg-forest text-cream">
-      <header className="sticky top-0 z-30 bg-forest border-b-2 border-cream/10">
-        <div className="px-4 py-3 flex items-center gap-3">
-          <Link to="/admin" className="h-11 w-11 rounded-full bg-forest-dark flex items-center justify-center"><ArrowLeft className="h-5 w-5" /></Link>
-          <div>
-            <div className="font-display italic font-bold text-2xl">POS</div>
-            <div className="text-xs text-cream/60">Wanchai Soy · Walai</div>
+    <div className={`min-h-screen bg-forest text-cream ${isSpanned ? 'duo-spanned-active' : ''}`}>
+      <header className="sticky top-0 z-30 bg-forest border-b-2 border-cream/10 duo-nav-shell">
+        <div className="px-4 py-3 flex items-center justify-between gap-3 w-full">
+          <div className="flex items-center gap-3 duo-nav-left">
+            <Link to="/admin" className="h-11 w-11 rounded-full bg-forest-dark flex items-center justify-center hover:bg-forest-dark/80 transition">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <div className="font-display italic font-bold text-2xl flex items-center gap-2">
+                POS
+                {isSpanned && (
+                  <span className="text-[10px] font-mono uppercase bg-honey text-forest font-bold px-2 py-0.5 rounded-full not-italic">
+                    Dual-Screen
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-cream/60">Wanchai Soy · Walai</div>
+            </div>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => setSound(!sound)} className="h-11 w-11 rounded-full bg-forest-dark flex items-center justify-center">
+
+          <div className="flex items-center gap-2 duo-nav-right">
+            {/* Quick Dial Pad Toggle Button */}
+            <button
+              onClick={() => setShowDialPad(!showDialPad)}
+              className="h-11 px-4 rounded-full bg-honey text-forest font-bold text-xs flex items-center gap-1.5 shadow hover:bg-honey-dark transition active:scale-95"
+            >
+              <Calculator className="h-4 w-4" />
+              <span>{lang === 'th' ? 'แป้นคิดเงินหน้าร้าน' : 'Walk-by Dial Pad'}</span>
+            </button>
+
+            <button
+              onClick={load}
+              title="Refresh queue"
+              className="h-11 w-11 rounded-full bg-forest-dark flex items-center justify-center hover:bg-forest-dark/80 transition"
+            >
+              <RotateCcw className="h-4 w-4" />
+            </button>
+
+            <button
+              onClick={() => setSound(!sound)}
+              className="h-11 w-11 rounded-full bg-forest-dark flex items-center justify-center hover:bg-forest-dark/80 transition"
+            >
               {sound ? <Volume2 className="h-5 w-5" /> : <VolumeX className="h-5 w-5" />}
             </button>
+
             <LanguageToggle compact />
           </div>
         </div>
       </header>
 
-      <main className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Column title={t.newOrder} icon={Bell} accent="bg-honey text-forest" count={newQueue.length}>
-          {newQueue.map((o) => (
-            <PosCard key={o.id} order={o} lang={lang}>
-              <button onClick={() => update(o.id, { status: 'preparing', payment_status: 'paid' })} className="pos-btn w-full rounded-2xl bg-honey text-forest active:scale-95"><ChefHat className="inline h-5 w-5 mr-1" /> {t.accept}</button>
-            </PosCard>
-          ))}
-        </Column>
+      {/* Main Content Wrapper with scroll-padding automatically managed by useFoldableSpanning */}
+      <main
+        ref={wrapperRef}
+        className={`p-4 transition-all duration-300 ${
+          isSpanned
+            ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 duo-screen-layout'
+            : 'grid grid-cols-1 md:grid-cols-3 gap-4'
+        }`}
+      >
+        {/* Left Segment: Kitchen / Counter Order Columns */}
+        <div className={`space-y-4 ${isSpanned ? 'grid grid-cols-1 sm:grid-cols-3 gap-3 duo-hinge-divider' : 'contents'}`}>
+          <Column title={t.newOrder} icon={Bell} accent="bg-honey text-forest" count={newQueue.length}>
+            {newQueue.map((o) => (
+              <PosCard key={o.id} order={o} lang={lang}>
+                <button onClick={() => update(o.id, { status: 'preparing', payment_status: 'paid' })} className="pos-btn w-full rounded-2xl bg-honey text-forest active:scale-95"><ChefHat className="inline h-5 w-5 mr-1" /> {t.accept}</button>
+              </PosCard>
+            ))}
+          </Column>
 
-        <Column title={t.preparing} icon={ChefHat} accent="bg-terracotta text-cream" count={preparing.length}>
-          {preparing.map((o) => (
-            <PosCard key={o.id} order={o} lang={lang}>
-              <button onClick={() => update(o.id, { status: 'ready' })} className="pos-btn w-full rounded-2xl bg-terracotta text-cream active:scale-95"><Package className="inline h-5 w-5 mr-1" /> {t.markReady}</button>
-            </PosCard>
-          ))}
-        </Column>
+          <Column title={t.preparing} icon={ChefHat} accent="bg-terracotta text-cream" count={preparing.length}>
+            {preparing.map((o) => (
+              <PosCard key={o.id} order={o} lang={lang}>
+                <button onClick={() => update(o.id, { status: 'ready' })} className="pos-btn w-full rounded-2xl bg-terracotta text-cream active:scale-95"><Package className="inline h-5 w-5 mr-1" /> {t.markReady}</button>
+              </PosCard>
+            ))}
+          </Column>
 
-        <Column title={t.ready} icon={Package} accent="bg-cream text-forest" count={ready.length}>
-          {ready.map((o) => (
-            <PosCard key={o.id} order={o} lang={lang}>
-              <button onClick={() => update(o.id, { status: 'done' })} className="pos-btn w-full rounded-2xl bg-cream text-forest active:scale-95"><Check className="inline h-5 w-5 mr-1" /> {t.markDone}</button>
-            </PosCard>
-          ))}
-        </Column>
+          <Column title={t.ready} icon={Package} accent="bg-cream text-forest" count={ready.length}>
+            {ready.map((o) => (
+              <PosCard key={o.id} order={o} lang={lang}>
+                <button onClick={() => update(o.id, { status: 'done' })} className="pos-btn w-full rounded-2xl bg-cream text-forest active:scale-95"><Check className="inline h-5 w-5 mr-1" /> {t.markDone}</button>
+              </PosCard>
+            ))}
+          </Column>
+        </div>
+
+        {/* Right Segment on Foldable Dual-Screen: Docked Walk-by Dial Pad */}
+        {isSpanned && (
+          <div className="w-full">
+            <PosDialPad onOrderCreated={load} isEmbedded />
+          </div>
+        )}
       </main>
+
+      {/* Modal Walk-by Dial Pad for single-screen view or when manually opened */}
+      {showDialPad && !isSpanned && (
+        <PosDialPad
+          onClose={() => setShowDialPad(false)}
+          onOrderCreated={() => {
+            load();
+            setShowDialPad(false);
+          }}
+        />
+      )}
     </div>
   );
 }
+
 
 function Column({ title, icon: Ic, accent, count, children }: { title: string; icon: any; accent: string; count: number; children: React.ReactNode }) {
   return (
