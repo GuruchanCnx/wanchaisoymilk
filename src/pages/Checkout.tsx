@@ -15,6 +15,7 @@ export default function Checkout() {
 
   const [name, setName] = useState(() => localStorage.getItem('customer_name') || '');
   const [phone, setPhone] = useState(() => localStorage.getItem('customer_phone') || '');
+  const [email, setEmail] = useState(() => localStorage.getItem('customer_email') || 'banheruka@gmail.com');
   const [pickup, setPickup] = useState('asap');
   const [pickupCustom, setPickupCustom] = useState('');
   const [pay, setPay] = useState<'promptpay' | 'cash'>('promptpay');
@@ -25,6 +26,7 @@ export default function Checkout() {
 
   useEffect(() => { if (name) localStorage.setItem('customer_name', name); }, [name]);
   useEffect(() => { if (phone) localStorage.setItem('customer_phone', phone); }, [phone]);
+  useEffect(() => { if (email) localStorage.setItem('customer_email', email); }, [email]);
 
   const pickupTime = pickup === 'asap' ? (lang === 'th' ? 'ตอนนี้ (ASAP)' : 'ASAP') : pickupCustom;
 
@@ -47,6 +49,8 @@ export default function Checkout() {
         body: JSON.stringify({
           customer_name: name,
           phone,
+          email,
+          customer_email: email,
           items: items.map((i) => ({
             product_id: i.product_id,
             slug: i.slug,
@@ -81,6 +85,7 @@ export default function Checkout() {
           status: 'pending',
           payment_method: pay,
           pickup_time: pickupTime,
+          email,
         });
         localStorage.setItem('wanjai_orders', JSON.stringify(saved.slice(0, 30)));
       } catch {}
@@ -90,7 +95,7 @@ export default function Checkout() {
       // Queue for later sync
       try {
         const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
-        queue.push({ id: optimisticId, payload: { name, phone, items, total, pickup: pickupTime, pay, notes }, ts: Date.now() });
+        queue.push({ id: optimisticId, payload: { name, phone, email, items, total, pickup: pickupTime, pay, notes }, ts: Date.now() });
         localStorage.setItem('order_queue', JSON.stringify(queue));
       } catch {}
       alert(lang === 'th' ? 'ออฟไลน์ — เก็บคำสั่งไว้แล้ว จะส่งอัตโนมัติเมื่อกลับมาออนไลน์' : 'Offline — order saved and will sync when you reconnect.');
@@ -158,6 +163,20 @@ export default function Checkout() {
               <input inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full h-12 rounded-xl border-2 border-forest/15 bg-cream-soft px-4 focus:outline-none focus:border-forest" placeholder="08x xxx xxxx" />
             </Field>
           </div>
+          <Field label={lang === 'th' ? 'อีเมลสำหรับรับใบเสร็จอัตโนมัติ (Automated Email Receipt)' : 'Email for Automated Receipt'}>
+            <div className="relative">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full h-12 rounded-xl border-2 border-forest/15 bg-cream-soft px-4 focus:outline-none focus:border-forest text-sm font-mono"
+                placeholder="your-email@example.com"
+              />
+              <span className="absolute right-3 top-3 text-[10px] bg-forest/10 text-forest font-semibold px-2 py-1 rounded-md">
+                Firebase Function
+              </span>
+            </div>
+          </Field>
           <Field label={t.pickupTime}>
             <div className="flex flex-wrap gap-2">
               {[['asap', lang === 'th' ? 'ตอนนี้' : 'ASAP'], ['15', '+15 min'], ['30', '+30 min']].map(([v, l]) => (

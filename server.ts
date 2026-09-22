@@ -6,12 +6,18 @@ import productsHandler from './api/products.js';
 import ordersHandler from './api/orders.js';
 // @ts-ignore
 import settingsHandler from './api/settings.js';
+// @ts-ignore
+import migrateHandler from './api/migrate.js';
+// @ts-ignore
+import emailsHandler from './api/emails.js';
+// @ts-ignore
+import uploadHandler from './api/upload.js';
 
 const app = express();
 const PORT = 3000;
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -22,6 +28,9 @@ app.get('/api/health', (_req, res) => {
 app.all('/api/products', (req, res) => productsHandler(req, res));
 app.all('/api/orders', (req, res) => ordersHandler(req, res));
 app.all('/api/settings', (req, res) => settingsHandler(req, res));
+app.all('/api/migrate', (req, res) => migrateHandler(req, res));
+app.all('/api/emails', (req, res) => emailsHandler(req, res));
+app.all('/api/upload', (req, res) => uploadHandler(req, res));
 
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {

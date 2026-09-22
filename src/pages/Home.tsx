@@ -57,10 +57,10 @@ export default function Home() {
       ]} />
 
       {/* Hero */}
-      <section className="relative overflow-hidden border-b-4 border-forest">
+      <section className="relative overflow-hidden border-b border-forest/15">
         <div className="absolute inset-0">
-          <img src="/images/hero.jpg" alt="" className="w-full h-full object-cover opacity-30" />
-          <div className="absolute inset-0 bg-gradient-to-b from-cream/60 via-cream/40 to-cream" />
+          <img src="/images/hero.jpg" alt="" className="w-full h-full object-cover opacity-25" />
+          <div className="absolute inset-0 bg-gradient-to-b from-cream/70 via-cream/40 to-cream" />
         </div>
         <div className="relative mx-auto max-w-6xl px-4 pt-8 pb-10 sm:pt-14 sm:pb-16">
           <motion.div
@@ -68,10 +68,10 @@ export default function Home() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7 }}
           >
-            <div className="inline-flex items-center gap-2 rounded-full bg-cream border-2 border-forest px-3 py-1 text-xs font-semibold text-forest">
-              <span className={`h-2 w-2 rounded-full ${shopStatus === 'open' ? 'bg-forest pulse-dot' : 'bg-chili'}`} />
+            <div className="inline-flex items-center gap-2 rounded-full liquid-pill px-3.5 py-1.5 text-xs font-semibold text-forest shadow-xs">
+              <span className={`h-2.5 w-2.5 rounded-full ${shopStatus === 'open' ? 'bg-forest pulse-dot' : 'bg-chili'}`} />
               {shopStatus === 'open' ? t.open : shopStatus === 'closed' ? t.closed : t.onBreak}
-              <span className="opacity-60">· {settings.hours_today || '06:00 – 11:00'}</span>
+              <span className="opacity-60 font-mono">· {settings.hours_today || '06:00 – 11:00'}</span>
             </div>
             <h1 className="mt-4 font-display italic font-bold text-forest text-5xl sm:text-7xl leading-[0.9] tracking-tight">
               {lang === 'th' ? 'น้ำเต้าหู้' : 'Fresh soy,'}
@@ -80,34 +80,34 @@ export default function Home() {
             </h1>
             <p className="mt-4 text-ink-muted max-w-xl text-base sm:text-lg">{t.tagline}</p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-2">
+            <div className="mt-6 flex flex-wrap items-center gap-2.5">
               <button
                 onClick={() => document.getElementById('bestsellers')?.scrollIntoView({ behavior: 'smooth' })}
-                className="h-12 px-5 rounded-full bg-forest text-cream font-semibold shadow-md hover:bg-forest-dark active:scale-95 transition flex items-center gap-2"
+                className="h-12 px-6 rounded-full bg-forest text-cream font-bold text-xs shadow-md hover:bg-forest-dark active:scale-95 transition flex items-center gap-2"
               >
                 {t.tapToOrder} <ChevronDown className="h-4 w-4" />
               </button>
               <a
                 href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai"
                 target="_blank" rel="noreferrer"
-                className="h-12 px-5 rounded-full bg-cream border-2 border-forest text-forest font-semibold flex items-center gap-2 active:scale-95"
+                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs"
               >
                 <MapPin className="h-4 w-4" /> {t.directions}
               </a>
-              <Link to="/checkout" className="h-12 px-5 rounded-full bg-terracotta text-cream font-semibold flex items-center gap-2 active:scale-95 shadow-md">
+              <Link to="/checkout" className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition">
                 {t.walkupOrder}
               </Link>
             </div>
 
-            <div className="mt-6 inline-flex items-center gap-2 text-xs sm:text-sm bg-cream-soft border border-forest/10 rounded-full px-3 py-1.5 text-ink-muted">
+            <div className="mt-6 inline-flex items-center gap-2 text-xs sm:text-sm liquid-pill rounded-full px-3.5 py-1.5 text-ink-muted">
               <MapPin className="h-3.5 w-3.5 text-terracotta" /> {t.address} · <span className="text-forest font-semibold">{t.pickupOnly}</span>
             </div>
           </motion.div>
         </div>
 
         {/* Ticker */}
-        <div className="relative border-t-2 border-forest bg-forest text-cream overflow-hidden">
-          <div className="flex whitespace-nowrap marquee py-2 text-sm font-semibold">
+        <div className="relative border-t border-forest/15 bg-forest text-cream overflow-hidden">
+          <div className="flex whitespace-nowrap marquee py-2.5 text-xs font-semibold tracking-wide">
             {Array(2).fill(0).map((_, k) => (
               <span key={k} className="flex items-center">
                 {['นมถั่วเหลือง ต้นตำรับ', 'Made this morning · clear-bag tradition', 'ปาท่องโก ซาลาเปา ชิ้นละ ฿3', 'Patongko & Salapao · ฿3 each', 'เอาภาชนะมาเอง ลด 2 บาท', 'BYO container: – ฿2'].map((s, i) => (
@@ -119,61 +119,61 @@ export default function Home() {
         </div>
       </section>
 
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="mx-auto max-w-6xl px-4 py-8 apple-duo-container">
         <MyUsualStrip />
         <RecentOrdersStrip />
 
         {/* Bestsellers */}
-        <section id="bestsellers" className="mb-10">
+        <section id="bestsellers" className="mb-12">
           <SectionHeading eyebrow={lang === 'th' ? 'ขายดีที่สุด' : 'Fastest movers'} title={lang === 'th' ? 'อันดับหนึ่งของเจ้า' : 'Our bestsellers'} />
           {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 apple-duo-grid">
               {bestsellers.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
             </div>
           )}
         </section>
 
         {/* Drinks */}
-        <section id="drinks" className="mb-10">
+        <section id="drinks" className="mb-12">
           <SectionHeading eyebrow="🥛" title={t.drinks} sub={lang === 'th' ? 'เลือกภาชนะ · ความหวาน · ร้อน/เย็น' : 'Choose vessel · sweetness · hot/cold'} />
           {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
               {drinks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
             </div>
           )}
         </section>
 
         {/* Snacks */}
-        <section id="snacks" className="mb-10">
+        <section id="snacks" className="mb-12">
           <SectionHeading eyebrow="⚡" title={t.snacks} sub={lang === 'th' ? 'บวกเข้ากับเครื่องดื่ม — ชิ้นละ ฿3' : 'Grab-and-go add-ons — ฿3 each'} />
           {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
               {snacks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
             </div>
           )}
         </section>
 
         {/* About */}
-        <section id="about" className="mb-10 grid md:grid-cols-2 gap-6">
-          <div className="rounded-3xl bg-forest text-cream p-6 sm:p-8 relative overflow-hidden">
-            <div className="absolute -right-8 -bottom-8 h-48 w-48 rounded-full bg-forest-light/40" />
-            <div className="absolute right-6 top-6 opacity-70">
-              <div className="h-20 w-16 rounded-3xl bg-cream milk-bag"></div>
+        <section id="about" className="mb-12 grid md:grid-cols-2 gap-6 apple-duo-split">
+          <div className="rounded-3xl liquid-glass border border-white/60 p-6 sm:p-8 relative overflow-hidden shadow-sm apple-duo-col-1">
+            <div className="absolute -right-8 -bottom-8 h-48 w-48 rounded-full bg-forest/10" />
+            <div className="absolute right-6 top-6 opacity-80">
+              <div className="h-20 w-16 rounded-3xl bg-forest/20 milk-bag border border-forest/20"></div>
             </div>
             <div className="relative">
-              <div className="text-xs uppercase tracking-widest opacity-70">{lang === 'th' ? 'เรื่องราวของเรา' : 'Our story'}</div>
-              <h3 className="font-display italic font-bold text-3xl mt-2">{t.aboutBags}</h3>
-              <p className="mt-3 text-cream/85 leading-relaxed">{t.aboutBagsBody}</p>
+              <div className="text-xs uppercase tracking-widest text-forest font-bold">{lang === 'th' ? 'เรื่องราวของเรา' : 'Our story'}</div>
+              <h3 className="font-display italic font-bold text-3xl text-forest mt-2">{t.aboutBags}</h3>
+              <p className="mt-3 text-ink leading-relaxed text-sm font-thai">{t.aboutBagsBody}</p>
             </div>
           </div>
-          <div className="rounded-3xl bg-cream-soft border-2 border-forest/10 p-6 sm:p-8">
-            <div className="text-xs uppercase tracking-widest text-ink-muted">{lang === 'th' ? 'ชุดต่อไปทำเมื่อ' : 'Next batches today'}</div>
+          <div className="rounded-3xl liquid-glass border border-white/60 p-6 sm:p-8 shadow-sm apple-duo-col-2">
+            <div className="text-xs uppercase tracking-widest text-ink-muted font-bold">{lang === 'th' ? 'ชุดต่อไปทำเมื่อ' : 'Next batches today'}</div>
             <h3 className="font-display italic font-bold text-2xl mt-1 text-forest">{lang === 'th' ? 'พร้อมเสิร์ฟเมื่อ' : 'When we serve'}</h3>
             <ul className="mt-4 space-y-3">
               {[['06:00', lang === 'th' ? 'นมถั่วชุดแรก' : 'First soy batch'], ['07:30', lang === 'th' ? 'นมวัวสด + ซาลาเปาออกเตา' : 'Fresh cow milk + salapao out of steamer'], ['09:00', lang === 'th' ? 'น้ำขิงร้อนชุดใหม่' : 'Fresh ginger tea']].map(([time, label]) => (
                 <li key={time} className="flex items-center gap-3">
-                  <div className="h-10 w-14 rounded-lg bg-forest text-cream flex items-center justify-center font-mono font-semibold">{time}</div>
-                  <div className="font-thai text-ink">{label}</div>
+                  <div className="h-10 w-16 rounded-xl bg-forest text-cream flex items-center justify-center font-mono font-bold text-xs shadow-xs">{time}</div>
+                  <div className="font-thai text-ink text-sm font-medium">{label}</div>
                 </li>
               ))}
             </ul>
@@ -181,45 +181,45 @@ export default function Home() {
         </section>
 
         {/* Order History */}
-        <section id="history" className="mb-10">
+        <section id="history" className="mb-12">
           <OrderHistory />
         </section>
 
         {/* Visit */}
-        <section id="visit" className="mb-10">
+        <section id="visit" className="mb-12">
           <SectionHeading eyebrow={lang === 'th' ? 'มาหาเรา' : 'Come visit'} title={lang === 'th' ? 'สาขาเดียว — หน้าม.ช.เชียงใหม่' : 'One shop — near CMU'} />
-          <div className="rounded-3xl overflow-hidden border-2 border-forest/15 grid md:grid-cols-2">
-            <div className="p-6 bg-cream-soft">
+          <div className="rounded-3xl overflow-hidden liquid-glass border border-white/60 grid md:grid-cols-2 shadow-sm apple-duo-split">
+            <div className="p-6 sm:p-8 apple-duo-col-1">
               <div className="font-display italic font-bold text-2xl text-forest">Wanchai Soy</div>
-              <div className="font-thai text-ink mt-1">{t.address}</div>
-              <ul className="mt-4 space-y-2 text-sm text-ink">
+              <div className="font-thai text-ink mt-1 text-sm">{t.address}</div>
+              <ul className="mt-4 space-y-2.5 text-xs text-ink">
                 <li className="flex items-center gap-2"><Clock className="h-4 w-4 text-terracotta" /> {lang === 'th' ? 'ทุกวัน 06:00 – 11:00' : 'Daily 06:00 – 11:00'}</li>
                 <li className="flex items-center gap-2"><Phone className="h-4 w-4 text-terracotta" /> 053-000-000</li>
                 <li className="flex items-center gap-2"><Instagram className="h-4 w-4 text-terracotta" /> @wanchai.soy</li>
               </ul>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <a href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai" target="_blank" rel="noreferrer" className="h-11 px-4 rounded-full bg-forest text-cream font-semibold flex items-center gap-2">
+              <div className="mt-5 flex flex-wrap gap-2.5">
+                <a href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai" target="_blank" rel="noreferrer" className="h-11 px-5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-2 shadow-sm hover:bg-forest-dark transition active:scale-95">
                   <MapPin className="h-4 w-4" /> {t.directions}
                 </a>
-                <a href="tel:+66530000000" className="h-11 px-4 rounded-full bg-cream border-2 border-forest text-forest font-semibold flex items-center gap-2">
+                <a href="tel:+66530000000" className="h-11 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95">
                   <Phone className="h-4 w-4" /> {t.callShop}
                 </a>
               </div>
             </div>
-            <div className="bg-forest text-cream p-6 relative overflow-hidden">
+            <div className="bg-forest text-cream p-6 sm:p-8 relative overflow-hidden apple-duo-col-2">
               <div className="absolute inset-0 opacity-20">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(232,180,74,0.4),transparent_40%)]" />
               </div>
               <div className="relative">
-                <div className="text-xs uppercase tracking-widest text-honey">{lang === 'th' ? 'สิ่งที่ขายดี' : 'Bestsellers'}</div>
-                <ul className="mt-3 space-y-1 font-display italic font-bold text-2xl">
+                <div className="text-xs uppercase tracking-widest text-honey font-bold">{lang === 'th' ? 'สิ่งที่ขายดี' : 'Bestsellers'}</div>
+                <ul className="mt-3 space-y-1.5 font-display italic font-bold text-2xl">
                   <li>— {lang === 'th' ? 'น้ำเต้าหู้' : 'Soy milk (bag)'}</li>
                   <li>— {lang === 'th' ? 'นมวัวสด' : 'Fresh cow milk'}</li>
                   <li>— {lang === 'th' ? 'น้ำขิง' : 'Ginger tea'}</li>
                 </ul>
                 <div className="mt-6 text-cream/80">
-                  {lang === 'th' ? 'ซาลาเปา · ปาท่องโก' : 'Salapao · Patongko'}
-                  <div className="font-display italic font-bold text-3xl text-honey">฿3 {lang === 'th' ? '/ชิ้น' : 'each'}</div>
+                  <span className="text-xs uppercase tracking-wider font-semibold">{lang === 'th' ? 'ซาลาเปา · ปาท่องโก' : 'Salapao · Patongko'}</span>
+                  <div className="font-display italic font-bold text-3xl text-honey mt-0.5">฿3 {lang === 'th' ? '/ชิ้น' : 'each'}</div>
                 </div>
               </div>
             </div>
