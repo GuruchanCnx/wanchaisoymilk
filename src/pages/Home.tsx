@@ -11,6 +11,7 @@ import ProductCard from '../components/ProductCard';
 import OrderModal from '../components/OrderModal';
 import MyUsualStrip from '../components/MyUsualStrip';
 import RecentOrdersStrip from '../components/RecentOrdersStrip';
+import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
 
 export default function Home() {
@@ -50,6 +51,7 @@ export default function Home() {
         { id: 'bestsellers', label_th: 'ขายดี', label_en: 'Bestsellers' },
         { id: 'drinks', label_th: 'เครื่องดื่ม', label_en: 'Drinks' },
         { id: 'snacks', label_th: 'ของว่าง', label_en: 'Snacks' },
+        { id: 'history', label_th: 'ประวัติสั่งซื้อ', label_en: 'History' },
         { id: 'about', label_th: 'เกี่ยวกับเรา', label_en: 'About' },
         { id: 'visit', label_th: 'มาหาเรา', label_en: 'Visit' },
       ]} />
@@ -176,6 +178,11 @@ export default function Home() {
               ))}
             </ul>
           </div>
+        </section>
+
+        {/* Order History */}
+        <section id="history" className="mb-10">
+          <OrderHistory />
         </section>
 
         {/* Visit */}

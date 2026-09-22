@@ -1,9 +1,13 @@
-import supabase from './db-client.js';
+import {
+  getFirestoreSettings,
+  updateFirestoreSetting,
+} from './firestore-db.js';
 
-let inMemorySettings = {
+let defaultSettings = {
   shop_status: 'open',
   announcement: 'วันใจ Soy — น้ำเต้าหู้ นมวัว น้ำขิง สดใหม่ทุกเช้า',
-  promptpay_number: '0812345678',
+  promptpay_number: '081-234-5678',
+  promptpay_name: 'วันใจ Soy (Wanchai Soy Milk)',
   shop_phone: '081-234-5678',
   open_hours_th: '06:00 - 11:00 น. (ทุกวัน)',
   open_hours_en: '06:00 - 11:00 AM (Daily)',
@@ -19,39 +23,21 @@ export default async function handler(req, res) {
 
   try {
     if (req.method === 'GET') {
-      try {
-        const { data, error } = await supabase.from('settings').select('*');
-        if (!error && Array.isArray(data) && data.length > 0) {
-          const map = {};
-          data.forEach((r) => {
-            map[r.key] = r.value;
-          });
-          inMemorySettings = { ...inMemorySettings, ...map };
-          res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=120');
-          return res.status(200).json(inMemorySettings);
-        }
-      } catch (err) {
-        console.warn('Supabase settings fetch failed, falling back to in-memory:', err.message);
+      const list = await getFirestoreSettings();
+      const map = { ...defaultSettings };
+      if (Array.isArray(list)) {
+        list.forEach((r) => {
+          if (r && r.key) map[r.key] = r.value;
+        });
       }
-      return res.status(200).json(inMemorySettings);
+      res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=120');
+      return res.status(200).json(map);
     }
     if (req.method === 'PUT') {
       const { key, value } = req.body || {};
       if (!key) return res.status(400).json({ error: 'key required' });
-      try {
-        const { data, error } = await supabase
-          .from('settings')
-          .upsert({ key, value })
-          .select()
-          .single();
-        if (!error && data) {
-          inMemorySettings[key] = value;
-          return res.status(200).json(data);
-        }
-      } catch (err) {
-        console.warn('Supabase settings upsert failed, updating in-memory:', err.message);
-      }
-      inMemorySettings[key] = value;
+      await updateFirestoreSetting(key, value);
+      defaultSettings[key] = value;
       return res.status(200).json({ key, value });
     }
     res.status(405).json({ error: 'Method not allowed' });
@@ -60,4 +46,5 @@ export default async function handler(req, res) {
     res.status(500).json({ error: err.message });
   }
 }
+
 

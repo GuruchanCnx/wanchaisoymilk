@@ -25,25 +25,48 @@ type Ctx = {
   clear: () => void;
   subtotal: number;
   count: number;
+  bumpKey: number;
 };
 
-const CartContext = createContext<Ctx>({ items: [], add: () => {}, updateQty: () => {}, remove: () => {}, clear: () => {}, subtotal: 0, count: 0 });
+const CartContext = createContext<Ctx>({
+  items: [],
+  add: () => {},
+  updateQty: () => {},
+  remove: () => {},
+  clear: () => {},
+  subtotal: 0,
+  count: 0,
+  bumpKey: 0,
+});
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
     try { return JSON.parse(localStorage.getItem('cart') || '[]'); } catch { return []; }
   });
+  const [bumpKey, setBumpKey] = useState<number>(0);
 
   useEffect(() => { localStorage.setItem('cart', JSON.stringify(items)); }, [items]);
 
-  const add = (item: CartItem) => setItems((prev) => {
-    // merge identical lines
-    const existing = prev.find((p) => p.slug === item.slug && p.vessel === item.vessel && p.sweetness === item.sweetness && p.temp === item.temp && JSON.stringify(p.extras) === JSON.stringify(item.extras) && (p.notes || '') === (item.notes || ''));
-    if (existing) {
-      return prev.map((p) => p === existing ? { ...p, qty: p.qty + item.qty } : p);
-    }
-    return [...prev, item];
-  });
+  const add = (item: CartItem) => {
+    setItems((prev) => {
+      // merge identical lines
+      const existing = prev.find(
+        (p) =>
+          p.slug === item.slug &&
+          p.vessel === item.vessel &&
+          p.sweetness === item.sweetness &&
+          p.temp === item.temp &&
+          JSON.stringify(p.extras) === JSON.stringify(item.extras) &&
+          (p.notes || '') === (item.notes || '')
+      );
+      if (existing) {
+        return prev.map((p) => (p === existing ? { ...p, qty: p.qty + item.qty } : p));
+      }
+      return [...prev, item];
+    });
+    // Trigger cart bounce/shake animation
+    setBumpKey((prev) => prev + 1);
+  };
   const updateQty = (key: string, qty: number) => setItems((prev) => qty <= 0 ? prev.filter((p) => p.key !== key) : prev.map((p) => p.key === key ? { ...p, qty } : p));
   const remove = (key: string) => setItems((prev) => prev.filter((p) => p.key !== key));
   const clear = () => setItems([]);
@@ -51,7 +74,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const count = items.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, add, updateQty, remove, clear, subtotal, count }}>
+    <CartContext.Provider value={{ items, add, updateQty, remove, clear, subtotal, count, bumpKey }}>
       {children}
     </CartContext.Provider>
   );

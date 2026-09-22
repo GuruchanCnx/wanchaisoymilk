@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Minus, Plus, Trash2, QrCode, Wallet, ShoppingBag, Clock } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, Trash2, QrCode, Wallet, ShoppingBag, Clock, Sparkles } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { baht, shortId } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
+import PromptPayQR from '../components/PromptPayQR';
 
 export default function Checkout() {
   const { t, lang } = useLang();
@@ -20,6 +21,7 @@ export default function Checkout() {
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
   const [placed, setPlaced] = useState<{ id: number; localId?: string } | null>(null);
+  const [qrGenerated, setQrGenerated] = useState(false);
 
   useEffect(() => { if (name) localStorage.setItem('customer_name', name); }, [name]);
   useEffect(() => { if (phone) localStorage.setItem('customer_phone', phone); }, [phone]);
@@ -70,6 +72,17 @@ export default function Checkout() {
       try {
         const list: number[] = JSON.parse(localStorage.getItem('my_order_ids') || '[]');
         localStorage.setItem('my_order_ids', JSON.stringify([order.id, ...list].slice(0, 20)));
+        const saved = JSON.parse(localStorage.getItem('wanjai_orders') || '[]');
+        saved.unshift({
+          id: order.id,
+          created_at: new Date().toISOString(),
+          total,
+          items: items.map((i) => ({ ...i })),
+          status: 'pending',
+          payment_method: pay,
+          pickup_time: pickupTime,
+        });
+        localStorage.setItem('wanjai_orders', JSON.stringify(saved.slice(0, 30)));
       } catch {}
       clear();
       nav(`/order/${order.id}`);
@@ -159,19 +172,81 @@ export default function Checkout() {
         </Step>
 
         <Step n={3} label={lang === 'th' ? 'ชำระเงิน' : 'Payment'}>
-          <div className="grid grid-cols-2 gap-2">
-            <PayButton chosen={pay === 'promptpay'} onClick={() => setPay('promptpay')} Icon={QrCode} label={t.payWithQR} />
-            <PayButton chosen={pay === 'cash'} onClick={() => setPay('cash')} Icon={Wallet} label={t.payWithCash} />
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <PayButton
+              chosen={pay === 'promptpay'}
+              onClick={() => {
+                setPay('promptpay');
+                setQrGenerated(true);
+              }}
+              Icon={QrCode}
+              label={t.payWithQR}
+            />
+            <PayButton
+              chosen={pay === 'cash'}
+              onClick={() => setPay('cash')}
+              Icon={Wallet}
+              label={t.payWithCash}
+            />
           </div>
+
           {pay === 'promptpay' && (
-            <div className="mt-4 rounded-2xl border-2 border-forest bg-cream-soft p-4 flex items-center gap-4">
-              <div className="h-24 w-24 rounded-xl bg-white p-2 border-2 border-forest/20 flex items-center justify-center">
-                <QrPlaceholder />
+            <div className="space-y-4">
+              {!qrGenerated ? (
+                <div className="rounded-2xl border-2 border-forest/20 bg-cream-soft p-5 text-center">
+                  <div className="h-12 w-12 rounded-full bg-forest/10 text-forest mx-auto flex items-center justify-center mb-2">
+                    <QrCode className="h-6 w-6" />
+                  </div>
+                  <div className="font-thai font-bold text-forest text-base">
+                    {lang === 'th' ? 'ชำระผ่าน PromptPay QR' : 'Pay via PromptPay QR'}
+                  </div>
+                  <div className="text-xs text-ink-muted mt-1 max-w-xs mx-auto">
+                    {lang === 'th'
+                      ? 'กดปุ่มด้านล่างเพื่อสร้างคิวอาร์โค้ดพร้อมเพย์สำหรับยอดรวมคำสั่งซื้อของคุณ'
+                      : 'Generate your instant Thai QR PromptPay code matching your cart total'}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setQrGenerated(true)}
+                    className="mt-4 inline-flex items-center gap-2 h-11 px-5 rounded-full bg-forest text-cream font-bold text-sm shadow hover:bg-forest-dark active:scale-95 transition"
+                  >
+                    <Sparkles className="h-4 w-4 text-honey" />
+                    {lang === 'th' ? 'สร้างคิวอาร์โค้ดพร้อมเพย์ (Generate QR)' : 'Generate Payment QR'}
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-xs font-semibold text-forest flex items-center gap-1">
+                      <Sparkles className="h-3.5 w-3.5 text-honey" />
+                      {lang === 'th' ? 'คิวอาร์โค้ดพร้อมเพย์ของคุณพร้อมแล้ว' : 'Your Payment QR is Ready'}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setQrGenerated(true)}
+                      className="text-xs text-forest underline hover:text-terracotta"
+                    >
+                      {lang === 'th' ? 'รีเฟรชคิวอาร์' : 'Refresh QR'}
+                    </button>
+                  </div>
+                  <PromptPayQR amount={total} promptPayId="081-234-5678" />
+                </div>
+              )}
+            </div>
+          )}
+
+          {pay === 'cash' && (
+            <div className="rounded-2xl border-2 border-forest/15 bg-cream-soft p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-forest/10 text-forest flex items-center justify-center shrink-0">
+                <Wallet className="h-5 w-5" />
               </div>
-              <div className="text-sm">
-                <div className="font-thai font-semibold text-forest">PromptPay</div>
-                <div className="font-mono">053-000-000</div>
-                <div className="text-ink-muted text-xs mt-1">{lang === 'th' ? 'สแกน QR จากแอพธนาคารของคุณ — สถานะจะอัปเดตเมื่อเรายืนยัน' : 'Scan with your banking app — status updates when we confirm.'}</div>
+              <div className="text-xs text-ink-muted">
+                <strong className="text-forest block font-thai text-sm">
+                  {lang === 'th' ? 'ชำระเงินสดตอนรับสินค้าที่ร้าน' : 'Cash on Pickup'}
+                </strong>
+                {lang === 'th'
+                  ? 'ชำระกับพ่อค้าแม่ค้าที่หน้าร้านวันใจ Soy ถนนวัวลายเมื่อมารับของ'
+                  : 'Pay cash directly at our Wanchai Soy cart on Walai Road when picking up.'}
               </div>
             </div>
           )}

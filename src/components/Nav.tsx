@@ -1,12 +1,13 @@
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, MapPin, Phone, Settings, ClipboardList } from 'lucide-react';
+import { ShoppingBag, MapPin, Phone, Settings, ClipboardList, History } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useLang } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import LanguageToggle from './LanguageToggle';
 
 export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; label_th: string; label_en: string }[] }) {
   const { lang, t } = useLang();
-  const { count } = useCart();
+  const { count, bumpKey } = useCart();
   const loc = useLocation();
   const jump = (id: string) => {
     const el = document.getElementById(id);
@@ -41,15 +42,49 @@ export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; l
         )}
 
         <div className="flex items-center gap-2 ml-auto">
+          <Link
+            to="/history"
+            className={`h-9 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition ${
+              loc.pathname === '/history'
+                ? 'bg-forest text-cream border-forest'
+                : 'bg-cream-soft border-forest/15 text-forest hover:bg-forest/10'
+            }`}
+            title={lang === 'th' ? 'ประวัติการสั่งซื้อ' : 'Order History'}
+          >
+            <History className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">{lang === 'th' ? 'ประวัติสั่งซื้อ' : 'Order History'}</span>
+          </Link>
           <LanguageToggle compact />
           <Link
             to="/checkout"
             className="relative h-10 w-10 rounded-full bg-forest text-cream flex items-center justify-center shadow-sm hover:bg-forest-dark active:scale-95 transition"
             aria-label={t.cart}
           >
-            <ShoppingBag className="h-4.5 w-4.5" />
+            <motion.div
+              key={bumpKey}
+              initial={bumpKey > 0 ? { scale: 1, rotate: 0 } : false}
+              animate={
+                bumpKey > 0
+                  ? {
+                      scale: [1, 1.35, 0.88, 1.18, 0.96, 1],
+                      rotate: [0, -12, 12, -7, 7, 0],
+                    }
+                  : { scale: 1, rotate: 0 }
+              }
+              transition={{ duration: 0.55, ease: 'easeOut' }}
+              className="flex items-center justify-center"
+            >
+              <ShoppingBag className="h-4.5 w-4.5" />
+            </motion.div>
             {count > 0 && (
-              <span className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-terracotta text-cream text-[11px] font-bold flex items-center justify-center">{count}</span>
+              <motion.span
+                key={`badge-${count}`}
+                initial={{ scale: 0.6 }}
+                animate={{ scale: 1 }}
+                className="absolute -top-1 -right-1 h-5 min-w-5 px-1 rounded-full bg-terracotta text-cream text-[11px] font-bold flex items-center justify-center shadow-sm"
+              >
+                {count}
+              </motion.span>
             )}
           </Link>
         </div>
@@ -65,6 +100,12 @@ export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; l
                 className="px-3 py-1.5 rounded-full text-sm text-forest bg-cream-soft border border-forest/15 font-medium"
               >{lang === 'th' ? s.label_th : s.label_en}</button>
             ))}
+            <Link
+              to="/history"
+              className="px-3 py-1.5 rounded-full text-sm text-forest bg-cream-soft border border-forest/20 font-medium flex items-center gap-1"
+            >
+              <History className="h-3.5 w-3.5" /> {lang === 'th' ? 'ประวัติสั่งซื้อ' : 'History'}
+            </Link>
             <a
               href="https://maps.google.com/?q=15%2F4+Soi+2+Walai+Rd+Chiang+Mai"
               target="_blank" rel="noreferrer"
