@@ -16,11 +16,19 @@ import {
   Sparkles,
   Volume2,
   ExternalLink,
+  Radio,
+  FileDown,
+  Printer,
+  Award,
 } from 'lucide-react';
 import type { Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { baht, shortId, timeAgo } from '../lib/format';
 import { useCart } from '../contexts/CartContext';
+import { triggerHaptic } from '../lib/haptics';
+import { useToast } from '../contexts/ToastContext';
+import { downloadOrderReceiptPdf } from '../lib/pdf-receipt';
+import UserProfileModal from '../components/UserProfileModal';
 import {
   db,
   doc,
@@ -337,8 +345,9 @@ export default function OrderStatus() {
               <span className="text-xs uppercase tracking-widest text-honey font-bold">
                 {t.status}
               </span>
-              <span className="text-[11px] text-cream/70 bg-cream/10 px-2.5 py-0.5 rounded-full border border-cream/15">
-                Firebase Firestore Realtime
+              <span className="text-[11px] text-cream/90 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-400/30 flex items-center gap-1.5 shadow-xs">
+                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+                <span className="font-mono text-[10px] uppercase font-bold text-emerald-300">Firebase Firestore Live</span>
               </span>
             </div>
 

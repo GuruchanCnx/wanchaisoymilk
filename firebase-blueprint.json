@@ -1,0 +1,71 @@
+{
+  "entities": {
+    "products": {
+      "title": "Products",
+      "description": "Menu items, pricing, inventory, and availability for Wanchai Soy Milk.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number", "description": "Numeric product ID" },
+        "slug": { "type": "string", "description": "Unique URL identifier" },
+        "name_th": { "type": "string", "description": "Thai title" },
+        "name_en": { "type": "string", "description": "English title" },
+        "description_th": { "type": "string", "description": "Thai HTML description" },
+        "description_en": { "type": "string", "description": "English HTML description" },
+        "category": { "type": "string", "description": "Category (drinks, snacks, dips)" },
+        "price": { "type": "number", "description": "Base price in THB" },
+        "image_url": { "type": "string", "description": "Product image source" },
+        "available": { "type": "boolean", "description": "Active in menu" },
+        "sold_out": { "type": "boolean", "description": "Out of stock flag" },
+        "next_batch_time": { "type": "string", "description": "Estimated time for fresh batch" },
+        "stock": { "type": "number", "description": "Remaining stock count" },
+        "sort_order": { "type": "number", "description": "Display order" }
+      },
+      "required": ["id", "slug", "name_th", "price"]
+    },
+    "orders": {
+      "title": "Orders",
+      "description": "Customer and walk-by POS orders placed in the store.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number", "description": "Sequential order ID" },
+        "customer_name": { "type": "string", "description": "Customer name" },
+        "phone": { "type": "string", "description": "Contact telephone number" },
+        "email": { "type": "string", "description": "Receipt email address" },
+        "items": { "type": "array", "description": "Line items" },
+        "total": { "type": "number", "description": "Total order amount in THB" },
+        "pickup_time": { "type": "string", "description": "Requested pickup time" },
+        "payment_method": { "type": "string", "description": "promptpay or cash" },
+        "payment_status": { "type": "string", "description": "pending or paid" },
+        "status": { "type": "string", "description": "pending, paid, preparing, ready, done, cancelled" },
+        "notes": { "type": "string", "description": "Special dietary requests" },
+        "fcm_token": { "type": "string", "description": "FCM device notification token" },
+        "created_at": { "type": "string", "description": "ISO timestamp" }
+      },
+      "required": ["id", "items", "total", "status"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Shop operational configurations, store hours, PromptPay and contacts.",
+      "type": "object",
+      "properties": {
+        "key": { "type": "string", "description": "Config key" },
+        "value": { "type": "any", "description": "Config value" }
+      },
+      "required": ["key"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "products",
+      "description": "Product catalogue documents"
+    },
+    "/orders/{orderId}": {
+      "schema": "orders",
+      "description": "Live and archived order queue"
+    },
+    "/settings/{settingKey}": {
+      "schema": "settings",
+      "description": "Store operational settings"
+    }
+  }
+}

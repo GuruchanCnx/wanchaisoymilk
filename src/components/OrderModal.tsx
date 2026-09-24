@@ -4,6 +4,8 @@ import { X, Minus, Plus, Heart } from 'lucide-react';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { useCart, type CartItem } from '../contexts/CartContext';
+import { useToast } from '../contexts/ToastContext';
+import { triggerHaptic } from '../lib/haptics';
 import { baht } from '../lib/format';
 
 type Vessel = 'bag' | 'cup' | 'bottle' | 'own';
@@ -15,6 +17,7 @@ const VESSEL_MOD: Record<Vessel, number> = { bag: 0, cup: 0, bottle: 5, own: -2 
 export default function OrderModal({ product, onClose }: { product: Product; onClose: () => void }) {
   const { t, lang } = useLang();
   const { add } = useCart();
+  const { showToast } = useToast();
   const isDrink = product.category === 'drinks';
   const [vessel, setVessel] = useState<Vessel>('bag');
   const [sweet, setSweet] = useState<Sweet>('normal');
@@ -54,6 +57,14 @@ export default function OrderModal({ product, onClose }: { product: Product; onC
     const item = buildItem();
     add(item);
     if (asUsual) saveUsual(item);
+    
+    // Tactile haptic pulse + toast notification
+    triggerHaptic('success');
+    showToast(
+      lang === 'th' ? `เพิ่ม ${item.name_th} ลงในตะกร้าแล้ว` : `Added ${item.name_en} to cart`,
+      lang === 'th' ? `จำนวน ${item.qty} รายการ (฿${item.unit_price * item.qty})` : `${item.qty} item(s) (฿${item.unit_price * item.qty})`,
+      'success'
+    );
     onClose();
   };
 

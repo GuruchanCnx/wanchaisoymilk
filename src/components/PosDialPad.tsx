@@ -14,6 +14,8 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
+import { useToast } from '../contexts/ToastContext';
+import { triggerHaptic } from '../lib/haptics';
 import { baht } from '../lib/format';
 import PromptPayQR from './PromptPayQR';
 
@@ -53,6 +55,7 @@ interface PosDialPadProps {
 
 export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false }: PosDialPadProps) {
   const { lang } = useLang();
+  const { showToast } = useToast();
 
   // Dial pad input state (for custom Baht amounts or manual calculation)
   const [dialInput, setDialInput] = useState<string>('');
@@ -77,6 +80,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
 
   // Handle number pad button clicks
   const handleDigit = (digit: string) => {
+    triggerHaptic('tap');
     if (dialInput.length > 5) return;
     if (digit === '00' && (dialInput === '' || dialInput === '0')) return;
     if (dialInput === '0' && digit !== '00') {
@@ -87,10 +91,12 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   };
 
   const handleBackspace = () => {
+    triggerHaptic('light');
     setDialInput((prev) => prev.slice(0, -1));
   };
 
   const handleClear = () => {
+    triggerHaptic('light');
     setDialInput('');
   };
 
@@ -98,6 +104,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   const handleAddCustomAmount = () => {
     const val = parseInt(dialInput, 10);
     if (!val || val <= 0) return;
+    triggerHaptic('medium');
     const newItem: TicketItem = {
       id: `custom-${Date.now()}`,
       name_th: `สินค้าพิเศษหน้าร้าน (฿${val})`,
@@ -111,6 +118,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
 
   // Quick product tap
   const handleAddProduct = (prod: QuickProduct) => {
+    triggerHaptic('medium');
     setTicketItems((prev) => {
       const existing = prev.find((item) => item.name_th === prod.name_th);
       if (existing) {
@@ -132,6 +140,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   };
 
   const updateItemQty = (id: string, delta: number) => {
+    triggerHaptic('light');
     setTicketItems((prev) =>
       prev
         .map((item) => {
@@ -192,6 +201,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
       });
 
       if (res.ok) {
+        const created = await res.json();
         // Play success chime
         try {
           const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -207,8 +217,14 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
           gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
           osc.start();
           osc.stop(ctx.currentTime + 0.45);
-          navigator.vibrate?.([40, 60, 40]);
         } catch {}
+
+        triggerHaptic('success');
+        showToast(
+          lang === 'th' ? `ลงบิลหน้าร้านสำเร็จ! #${created?.id || ''}` : `POS Order Saved! #${created?.id || ''}`,
+          lang === 'th' ? `ยอดรวม ฿${total} บันทึกลงระบบคิวแล้ว` : `Total ฿${total} logged to live queue`,
+          'success'
+        );
 
         clearTicket();
         onOrderCreated();

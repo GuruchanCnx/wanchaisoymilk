@@ -4,6 +4,8 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Minus, Plus, Trash2, QrCode, Wallet, ShoppingBag, Clock, Sparkles } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
+import { useToast } from '../contexts/ToastContext';
+import { triggerHaptic } from '../lib/haptics';
 import { baht, shortId } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PromptPayQR from '../components/PromptPayQR';
@@ -11,6 +13,7 @@ import PromptPayQR from '../components/PromptPayQR';
 export default function Checkout() {
   const { t, lang } = useLang();
   const { items, updateQty, remove, subtotal, clear } = useCart();
+  const { showToast } = useToast();
   const nav = useNavigate();
 
   const [name, setName] = useState(() => localStorage.getItem('customer_name') || '');
@@ -36,6 +39,7 @@ export default function Checkout() {
 
   const placeOrder = async () => {
     if (!canPlace || placing) return;
+    triggerHaptic('medium');
     setPlacing(true);
     const optimisticId = `local-${Date.now()}`;
 
@@ -72,6 +76,15 @@ export default function Checkout() {
       });
       if (!res.ok) throw new Error('Order failed');
       const order = await res.json();
+      
+      // Tactile celebration + toast confirmation
+      triggerHaptic('success');
+      showToast(
+        lang === 'th' ? `ส่งคำสั่งซื้อสำเร็จ! ออเดอร์ #${order.id}` : `Order Placed! #${order.id}`,
+        lang === 'th' ? 'กำลังนำท่านไปยังหน้าระบบติดตามสถานะออเดอร์...' : 'Redirecting to real-time tracking...',
+        'success'
+      );
+
       // Track for recent orders on this device
       try {
         const list: number[] = JSON.parse(localStorage.getItem('my_order_ids') || '[]');
@@ -92,13 +105,18 @@ export default function Checkout() {
       clear();
       nav(`/order/${order.id}`);
     } catch (err) {
+      triggerHaptic('error');
       // Queue for later sync
       try {
         const queue = JSON.parse(localStorage.getItem('order_queue') || '[]');
         queue.push({ id: optimisticId, payload: { name, phone, email, items, total, pickup: pickupTime, pay, notes }, ts: Date.now() });
         localStorage.setItem('order_queue', JSON.stringify(queue));
       } catch {}
-      alert(lang === 'th' ? 'ออฟไลน์ — เก็บคำสั่งไว้แล้ว จะส่งอัตโนมัติเมื่อกลับมาออนไลน์' : 'Offline — order saved and will sync when you reconnect.');
+      showToast(
+        lang === 'th' ? 'บันทึกออฟไลน์แล้ว' : 'Saved Offline',
+        lang === 'th' ? 'ระบบจะส่งคำสั่งซื้อทันทีเมื่อคุณเชื่อมต่ออินเทอร์เน็ต' : 'Will sync as soon as you reconnect.',
+        'info'
+      );
       setPlacing(false);
       setPlaced(null);
     }

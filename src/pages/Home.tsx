@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check } from 'lucide-react';
+import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check, QrCode } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -9,16 +9,19 @@ import OnlineBadge from '../components/OnlineBadge';
 import BackToTop from '../components/BackToTop';
 import ProductCard from '../components/ProductCard';
 import OrderModal from '../components/OrderModal';
+import MenuQrModal from '../components/MenuQrModal';
 import MyUsualStrip from '../components/MyUsualStrip';
 import RecentOrdersStrip from '../components/RecentOrdersStrip';
 import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
+import { triggerHaptic } from '../lib/haptics';
 
 export default function Home() {
   const { t, lang } = useLang();
   const [products, setProducts] = useState<Product[]>(() => cacheGet<Product[]>('menu', 30_000) || []);
   const [loading, setLoading] = useState(products.length === 0);
   const [modal, setModal] = useState<Product | null>(null);
+  const [qrModalOpen, setQrModalOpen] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>(() => cacheGet('settings', 60_000) || {});
   const [copiedCoords, setCopiedCoords] = useState(false);
 
@@ -126,20 +129,38 @@ export default function Home() {
 
             <div className="mt-6 flex flex-wrap items-center gap-2.5">
               <button
-                onClick={() => document.getElementById('bestsellers')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={() => {
+                  triggerHaptic('tap');
+                  document.getElementById('bestsellers')?.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="h-12 px-6 rounded-full bg-forest text-cream font-bold text-xs shadow-md hover:bg-forest-dark active:scale-95 transition flex items-center gap-2"
               >
                 {t.tapToOrder} <ChevronDown className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setQrModalOpen(true);
+                }}
+                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs hover:bg-forest/10 transition"
+              >
+                <QrCode className="h-4 w-4 text-forest" />
+                <span>{lang === 'th' ? 'QR เมนูร้าน' : 'Menu QR Code'}</span>
               </button>
               <a
                 href={directionsUrl}
                 target="_blank"
                 rel="noreferrer"
+                onClick={() => triggerHaptic('tap')}
                 className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs"
               >
                 <MapPin className="h-4 w-4 text-terracotta" /> {t.directions}
               </a>
-              <Link to="/checkout" className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition">
+              <Link
+                to="/checkout"
+                onClick={() => triggerHaptic('tap')}
+                className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition"
+              >
                 {t.walkupOrder}
               </Link>
             </div>
@@ -387,6 +408,7 @@ export default function Home() {
       </main>
 
       {modal && <OrderModal product={modal} onClose={() => setModal(null)} />}
+      <MenuQrModal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} />
       <BackToTop />
       <DesktopSideActions />
     </div>

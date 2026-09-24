@@ -32,11 +32,19 @@ app.all('/api/migrate', (req, res) => migrateHandler(req, res));
 app.all('/api/emails', (req, res) => emailsHandler(req, res));
 app.all('/api/upload', (req, res) => uploadHandler(req, res));
 
+// Prevent API requests from ever falling through to HTML index fallback
+app.all('/api/*all', (_req, res) => {
+  res.status(404).json({ error: 'API route not found' });
+});
+
+// Explicitly serve public images for uploaded media
+app.use('/images', express.static(path.join(process.cwd(), 'public', 'images')));
+
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
-      server: { middlewareMode: true, host: '0.0.0.0', port: PORT },
+      server: { middlewareMode: true, host: '0.0.0.0', port: PORT, hmr: false },
       appType: 'spa',
     });
     app.use(vite.middlewares);

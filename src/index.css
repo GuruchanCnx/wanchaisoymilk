@@ -372,3 +372,51 @@ a.btn:hover::after {
   }
 }
 
+/* =========================================================
+   Cart Shake Animation & Tactile Motion
+   ========================================================= */
+@keyframes cart-shake {
+  0% { transform: scale(1) rotate(0deg); }
+  15% { transform: scale(1.2) rotate(-14deg); }
+  30% { transform: scale(1.24) rotate(14deg); }
+  45% { transform: scale(1.14) rotate(-8deg); }
+  60% { transform: scale(1.08) rotate(8deg); }
+  75% { transform: scale(1.02) rotate(-3deg); }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.animate-cart-shake {
+  animation: cart-shake 0.65s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* =========================================================
+   Elder / High-Legibility Mode (โหมดอ่านง่าย ตัวอักษรใหญ่)
+   ========================================================= */
+html.elder-mode {
+  font-size: 115%;
+}
+
+html.elder-mode body {
+  letter-spacing: 0.015em;
+  font-weight: 500;
+}
+
+html.elder-mode button,
+html.elder-mode a {
+  min-height: 46px;
+}
+
+html.elder-mode .text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+}
+
+html.elder-mode .text-sm {
+  font-size: 1rem !important;
+  line-height: 1.5rem !important;
+}
+
+html.elder-mode .text-ink-muted {
+  color: #382414 !important; /* Ultra high contrast for senior readability */
+}
+
