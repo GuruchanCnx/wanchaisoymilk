@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check, QrCode } from 'lucide-react';
+import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check, QrCode, Mic } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -10,6 +10,7 @@ import BackToTop from '../components/BackToTop';
 import ProductCard from '../components/ProductCard';
 import OrderModal from '../components/OrderModal';
 import MenuQrModal from '../components/MenuQrModal';
+import VoiceOrderModal from '../components/VoiceOrderModal';
 import MyUsualStrip from '../components/MyUsualStrip';
 import RecentOrdersStrip from '../components/RecentOrdersStrip';
 import OrderHistory from '../components/OrderHistory';
@@ -22,6 +23,7 @@ export default function Home() {
   const [loading, setLoading] = useState(products.length === 0);
   const [modal, setModal] = useState<Product | null>(null);
   const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>(() => cacheGet('settings', 60_000) || {});
   const [copiedCoords, setCopiedCoords] = useState(false);
 
@@ -137,6 +139,18 @@ export default function Home() {
               >
                 {t.tapToOrder} <ChevronDown className="h-4 w-4" />
               </button>
+              {/* Voice-to-Text Order Button using browser SpeechRecognition */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setVoiceModalOpen(true);
+                }}
+                className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition group"
+              >
+                <Mic className="h-4 w-4 text-honey animate-pulse" />
+                <span>{t.voiceOrder}</span>
+              </button>
               <button
                 onClick={() => {
                   triggerHaptic('medium');
@@ -145,7 +159,7 @@ export default function Home() {
                 className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs hover:bg-forest/10 transition"
               >
                 <QrCode className="h-4 w-4 text-forest" />
-                <span>{lang === 'th' ? 'QR เมนูร้าน' : 'Menu QR Code'}</span>
+                <span>{t.tableQr}</span>
               </button>
               <a
                 href={directionsUrl}
@@ -159,7 +173,7 @@ export default function Home() {
               <Link
                 to="/checkout"
                 onClick={() => triggerHaptic('tap')}
-                className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition"
+                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs hover:bg-forest/10 transition"
               >
                 {t.walkupOrder}
               </Link>
@@ -195,7 +209,7 @@ export default function Home() {
 
         {/* Bestsellers */}
         <section id="bestsellers" className="mb-12">
-          <SectionHeading eyebrow={lang === 'th' ? 'ขายดีที่สุด' : 'Fastest movers'} title={lang === 'th' ? 'อันดับหนึ่งของร้าน' : 'Our bestsellers'} />
+          <SectionHeading eyebrow={t.bestsellers} title={lang === 'th' ? 'อันดับหนึ่งของร้าน' : 'Our bestsellers'} />
           {loading ? <SkeletonGrid /> : (
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 apple-duo-grid">
               {bestsellers.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
@@ -231,13 +245,13 @@ export default function Home() {
               <div className="h-20 w-16 rounded-3xl bg-forest/20 milk-bag border border-forest/20"></div>
             </div>
             <div className="relative">
-              <div className="text-xs uppercase tracking-widest text-forest font-bold">{lang === 'th' ? 'เรื่องราวของเรา' : 'Our story'}</div>
+              <div className="text-xs uppercase tracking-widest text-forest font-bold">{t.ourStory}</div>
               <h3 className="font-display italic font-bold text-3xl text-forest mt-2">{t.aboutBags}</h3>
               <p className="mt-3 text-ink leading-relaxed text-sm font-thai">{t.aboutBagsBody}</p>
             </div>
           </div>
           <div className="rounded-3xl liquid-glass border border-white/60 p-6 sm:p-8 shadow-sm apple-duo-col-2">
-            <div className="text-xs uppercase tracking-widest text-ink-muted font-bold">{lang === 'th' ? 'รอบการต้มสดวันนี้' : 'Next batches today'}</div>
+            <div className="text-xs uppercase tracking-widest text-ink-muted font-bold">{t.nextBatches}</div>
             <h3 className="font-display italic font-bold text-2xl mt-1 text-forest">{lang === 'th' ? 'เวลาพร้อมเสิร์ฟ' : 'When we serve'}</h3>
             <ul className="mt-4 space-y-3">
               {[
@@ -262,9 +276,9 @@ export default function Home() {
         {/* Visit Section with Accurate Coordinates 18°46'47.4"N 98°59'04.1"E and OSM Map */}
         <section id="visit" className="mb-12">
           <SectionHeading
-            eyebrow={lang === 'th' ? 'แผนที่และพิกัดร้าน' : 'Location & Directions'}
+            eyebrow={t.locationDirections}
             title={lang === 'th' ? 'ร้านวันใจ Soy · ถนนวัวลาย' : 'Wanchai Soy · Walai Road'}
-            sub={lang === 'th' ? 'พิกัดพิกัดชัดเจน 18°46\'47.4"N 98°59\'04.1"E' : 'Accurate GPS: 18°46\'47.4"N 98°59\'04.1"E'}
+            sub={lang === 'th' ? 'พิกัดร้านชัดเจน 18°46\'47.4"N 98°59\'04.1"E' : 'Accurate GPS: 18°46\'47.4"N 98°59\'04.1"E'}
           />
           <div className="rounded-3xl overflow-hidden liquid-glass border border-white/60 grid lg:grid-cols-12 shadow-sm apple-duo-split">
             {/* Left: Contact Info & Action Buttons (5 cols) */}
@@ -407,8 +421,31 @@ export default function Home() {
         </footer>
       </main>
 
+      {/* Floating Quick Voice Order Action */}
+      <button
+        type="button"
+        onClick={() => {
+          triggerHaptic('medium');
+          setVoiceModalOpen(true);
+        }}
+        title={t.voiceOrder}
+        className="fixed bottom-24 right-4 z-40 h-12 px-4 rounded-full bg-forest text-cream shadow-2xl flex items-center gap-2 hover:bg-forest-dark active:scale-95 transition border border-white/50 backdrop-blur-md group"
+      >
+        <div className="h-7 w-7 rounded-full bg-forest-dark flex items-center justify-center text-honey group-hover:scale-110 transition">
+          <Mic className="h-4 w-4" />
+        </div>
+        <span className="text-xs font-bold font-thai hidden sm:inline">
+          {t.voiceOrder}
+        </span>
+      </button>
+
       {modal && <OrderModal product={modal} onClose={() => setModal(null)} />}
       <MenuQrModal isOpen={qrModalOpen} onClose={() => setQrModalOpen(false)} />
+      <VoiceOrderModal
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+        products={products}
+      />
       <BackToTop />
       <DesktopSideActions />
     </div>

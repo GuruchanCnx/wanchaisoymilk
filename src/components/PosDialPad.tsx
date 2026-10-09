@@ -15,7 +15,13 @@ import {
 } from 'lucide-react';
 import { useLang } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
-import { triggerHaptic } from '../lib/haptics';
+import {
+  triggerHaptic,
+  triggerPosDialHaptic,
+  applyQuickHapticPattern,
+  getCurrentQuickPattern,
+  type HapticQuickPattern,
+} from '../lib/haptics';
 import { baht } from '../lib/format';
 import PromptPayQR from './PromptPayQR';
 
@@ -66,6 +72,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   const [packaging, setPackaging] = useState<'bag' | 'cup' | 'dine-in'>('bag');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [showQRModal, setShowQRModal] = useState<boolean>(false);
+  const [hapticPattern, setHapticPattern] = useState<HapticQuickPattern>(() => getCurrentQuickPattern());
 
   // Compute total
   const total = useMemo(() => {
@@ -80,7 +87,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
 
   // Handle number pad button clicks
   const handleDigit = (digit: string) => {
-    triggerHaptic('tap');
+    triggerPosDialHaptic('digit');
     if (dialInput.length > 5) return;
     if (digit === '00' && (dialInput === '' || dialInput === '0')) return;
     if (dialInput === '0' && digit !== '00') {
@@ -91,12 +98,12 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   };
 
   const handleBackspace = () => {
-    triggerHaptic('light');
+    triggerPosDialHaptic('backspace');
     setDialInput((prev) => prev.slice(0, -1));
   };
 
   const handleClear = () => {
-    triggerHaptic('light');
+    triggerPosDialHaptic('clear');
     setDialInput('');
   };
 
@@ -104,7 +111,7 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
   const handleAddCustomAmount = () => {
     const val = parseInt(dialInput, 10);
     if (!val || val <= 0) return;
-    triggerHaptic('medium');
+    triggerPosDialHaptic('custom_add');
     const newItem: TicketItem = {
       id: `custom-${Date.now()}`,
       name_th: `สินค้าพิเศษหน้าร้าน (฿${val})`,
@@ -420,6 +427,33 @@ export default function PosDialPad({ onClose, onOrderCreated, isEmbedded = false
                 {lang === 'th' ? 'ยอดรวมทั้งหมด' : 'Grand Total'}
               </span>
               <span className="font-display italic font-bold text-2xl text-honey">{baht(total)}</span>
+            </div>
+          </div>
+
+          {/* Quick Haptic Pattern Selector */}
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[10px] uppercase font-bold text-honey flex items-center gap-1">
+              <Zap className="h-3 w-3" />
+              {lang === 'th' ? 'การสั่นปุ่ม' : 'Haptic Pattern'}
+            </span>
+            <div className="flex gap-1 bg-black/40 p-0.5 rounded-lg border border-cream/10">
+              {(['Soft Tap', 'Strong Click', 'Double Pulse'] as const).map((pat) => (
+                <button
+                  key={pat}
+                  type="button"
+                  onClick={() => {
+                    applyQuickHapticPattern(pat);
+                    setHapticPattern(pat);
+                  }}
+                  className={`px-2 py-0.5 text-[10px] rounded font-bold transition ${
+                    hapticPattern === pat
+                      ? 'bg-honey text-forest shadow-xs'
+                      : 'text-cream/60 hover:text-cream'
+                  }`}
+                >
+                  {pat}
+                </button>
+              ))}
             </div>
           </div>
 

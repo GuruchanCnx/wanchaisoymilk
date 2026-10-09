@@ -8,10 +8,17 @@ import { CartProvider } from './contexts/CartContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { AccessibilityProvider } from './contexts/AccessibilityContext';
 
-// Register a minimal service worker for offline shell (best-effort)
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Register service worker with Workbox caching strategy for offline resiliency
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker
+      .register('/sw.js')
+      .then((reg) => {
+        console.log('[PWA] Service Worker registered with scope:', reg.scope);
+      })
+      .catch((err) => {
+        console.warn('[PWA] Service Worker registration skipped:', err);
+      });
   });
 }
 

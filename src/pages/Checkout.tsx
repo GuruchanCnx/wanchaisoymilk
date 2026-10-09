@@ -9,6 +9,7 @@ import { triggerHaptic } from '../lib/haptics';
 import { baht, shortId } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PromptPayQR from '../components/PromptPayQR';
+import OrderSummaryModal from '../components/OrderSummaryModal';
 
 export default function Checkout() {
   const { t, lang } = useLang();
@@ -25,6 +26,7 @@ export default function Checkout() {
   const [notes, setNotes] = useState('');
   const [placing, setPlacing] = useState(false);
   const [placed, setPlaced] = useState<{ id: number; localId?: string } | null>(null);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
   const [qrGenerated, setQrGenerated] = useState(false);
 
   useEffect(() => { if (name) localStorage.setItem('customer_name', name); }, [name]);
@@ -289,20 +291,49 @@ export default function Checkout() {
           )}
         </Step>
 
-        <div className="mt-8 rounded-2xl bg-forest text-cream p-4 flex items-center justify-between">
+        <div className="mt-8 rounded-2xl bg-forest text-cream p-4 flex items-center justify-between shadow-md">
           <div>
             <div className="text-xs uppercase tracking-widest text-honey/80">{t.total}</div>
             <div className="font-display italic font-bold text-3xl">{baht(total)}</div>
           </div>
           <button
-            onClick={placeOrder}
-            disabled={!canPlace || placing}
-            className="h-14 px-6 rounded-full bg-terracotta text-cream font-bold text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-terracotta-dark active:scale-95 transition"
+            onClick={() => {
+              if (!canPlace) {
+                triggerHaptic('error');
+                showToast(
+                  lang === 'th' ? 'กรุณากรอกข้อมูลให้ครบถ้วน' : 'Incomplete Details',
+                  lang === 'th' ? 'กรุณาระบุชื่อและเบอร์โทรศัพท์สำหรับรับสินค้า' : 'Please provide your name and phone number',
+                  'warning'
+                );
+                return;
+              }
+              triggerHaptic('medium');
+              setShowSummaryModal(true);
+            }}
+            disabled={items.length === 0 || placing}
+            className="h-14 px-6 rounded-full bg-terracotta text-cream font-bold text-base sm:text-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-terracotta-dark active:scale-95 transition flex items-center gap-2"
           >
-            {placing ? t.syncPending : t.placeOrder}
+            <ShoppingBag className="h-5 w-5" />
+            <span>{placing ? t.syncPending : (lang === 'th' ? 'ตรวจสอบและสั่งซื้อ' : 'Review & Place Order')}</span>
           </button>
         </div>
       </main>
+
+      {/* Order Summary Modal for double-checking before placing */}
+      <OrderSummaryModal
+        isOpen={showSummaryModal}
+        onClose={() => setShowSummaryModal(false)}
+        onConfirm={placeOrder}
+        items={items}
+        total={total}
+        customerName={name}
+        phone={phone}
+        email={email}
+        pickupTime={pickupTime}
+        paymentMethod={pay}
+        notes={notes}
+        isSubmitting={placing}
+      />
 
       {placed && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 bg-forest/70 backdrop-blur-sm flex items-center justify-center p-4">

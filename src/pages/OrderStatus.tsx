@@ -27,7 +27,7 @@ import { baht, shortId, timeAgo } from '../lib/format';
 import { useCart } from '../contexts/CartContext';
 import { triggerHaptic } from '../lib/haptics';
 import { useToast } from '../contexts/ToastContext';
-import { downloadOrderReceiptPdf } from '../lib/pdf-receipt';
+import { downloadOrderReceiptPdf, printOrderReceipt } from '../lib/pdf-receipt';
 import UserProfileModal from '../components/UserProfileModal';
 import {
   db,
@@ -50,11 +50,14 @@ export default function OrderStatus() {
   const { id } = useParams();
   const { t, lang } = useLang();
   const { add } = useCart();
+  const { showToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [fcmEnabled, setFcmEnabled] = useState(false);
   const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [fcmLoading, setFcmLoading] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [emailSentSuccess, setEmailSentSuccess] = useState(false);
   const [showEmailPreview, setShowEmailPreview] = useState(false);
@@ -198,6 +201,49 @@ export default function OrderStatus() {
       }
     } catch (e) {
       console.warn('Preview error:', e);
+    }
+  };
+
+  const handleDownloadReceipt = async () => {
+    if (!order || pdfDownloading) return;
+    setPdfDownloading(true);
+    triggerHaptic('medium');
+    try {
+      await downloadOrderReceiptPdf(order, {
+        lang: lang as 'th' | 'en',
+      });
+      triggerHaptic('success');
+      showToast(
+        lang === 'th' ? 'ดาวน์โหลดใบเสร็จสำเร็จ 📄' : 'Receipt Downloaded 📄',
+        lang === 'th' ? `บันทึกไฟล์ PDF สำหรับออเดอร์ #${order.id} แล้ว` : `Receipt #${order.id} PDF saved`,
+        'success'
+      );
+    } catch (err: any) {
+      console.error('PDF error:', err);
+      triggerHaptic('error');
+      showToast(
+        lang === 'th' ? 'ดาวน์โหลดใบเสร็จไม่สำเร็จ' : 'Failed to download receipt',
+        err?.message || 'Error generating PDF',
+        'error'
+      );
+    } finally {
+      setPdfDownloading(false);
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    if (!order) return;
+    triggerHaptic('tap');
+    try {
+      printOrderReceipt(order, { lang: lang as 'th' | 'en' });
+      showToast(
+        lang === 'th' ? 'สั่งพิมพ์ใบเสร็จ 🖨️' : 'Printing Receipt 🖨️',
+        lang === 'th' ? 'กำลังเปิดหน้าต่างการพิมพ์...' : 'Opening print dialog...',
+        'info'
+      );
+    } catch (err) {
+      console.warn('Print error, falling back to window.print():', err);
+      window.print();
     }
   };
 
@@ -528,6 +574,92 @@ export default function OrderStatus() {
           )}
         </div>
 
+        {/* Formatted PDF Receipt & Print Option */}
+        <div className="rounded-2xl liquid-glass p-4 border border-white/50">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-forest/10 text-forest flex items-center justify-center shrink-0 mt-0.5">
+                <FileDown className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-xs font-bold text-forest uppercase tracking-wider flex items-center gap-1.5">
+                  <span>{lang === 'th' ? 'ใบเสร็จรับเงิน PDF ทางการ' : 'Official PDF Receipt'}</span>
+                  <span className="text-[10px] bg-forest/10 text-forest px-2 py-0.5 rounded-full font-mono font-semibold">
+                    80mm POS
+                  </span>
+                </div>
+                <div className="text-xs text-ink-muted mt-0.5">
+                  {lang === 'th'
+                    ? 'ดาวน์โหลดใบเสร็จรับเงินรูปแบบ PDF พร้อม QR ตรวจสอบ สำหรับบันทึกหรือเบิกจ่าย'
+                    : 'Download crisp formatted PDF receipt with verification QR code'}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handlePrintReceipt}
+                className="h-9 px-3.5 rounded-full bg-cream border border-forest/20 text-forest text-xs font-semibold hover:bg-forest/5 flex items-center gap-1.5 transition active:scale-95 shadow-2xs"
+                title={lang === 'th' ? 'พิมพ์ใบเสร็จ' : 'Print Receipt'}
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>{lang === 'th' ? 'พิมพ์' : 'Print'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadReceipt}
+                disabled={pdfDownloading}
+                className="h-9 px-4 rounded-full bg-forest text-cream hover:bg-forest-dark text-xs font-bold flex items-center gap-1.5 transition active:scale-95 shadow-xs disabled:opacity-50"
+              >
+                {pdfDownloading ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>{lang === 'th' ? 'กำลังสร้าง PDF...' : 'Generating...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="h-3.5 w-3.5" />
+                    <span>{lang === 'th' ? 'ดาวน์โหลด PDF' : 'Download PDF'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Loyalty Points Earned Banner */}
+        <div className="rounded-2xl bg-gradient-to-r from-amber-50 to-amber-100/80 border border-amber-200/80 p-4 shadow-2xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-amber-500/20 text-amber-700 flex items-center justify-center shrink-0">
+              <Award className="h-5 w-5 text-amber-600" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-amber-900 uppercase tracking-wider">
+                {lang === 'th' ? 'แต้มสะสมวันใจคลับ' : 'WanJai Loyalty Club'}
+              </div>
+              <div className="text-xs text-amber-800">
+                {lang === 'th'
+                  ? `ออเดอร์นี้ได้รับ +${Math.round(order.total)} แต้มสะสม!`
+                  : `You earned +${Math.round(order.total)} points from this order!`}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('tap');
+              setShowProfileModal(true);
+            }}
+            className="h-8 px-3.5 rounded-full bg-amber-600 text-white text-xs font-bold hover:bg-amber-700 transition active:scale-95 shadow-xs shrink-0 flex items-center gap-1"
+          >
+            <Sparkles className="h-3 w-3" />
+            <span>{lang === 'th' ? 'ดูแต้มสะสม' : 'View Points'}</span>
+          </button>
+        </div>
+
         {/* Payment Status Card */}
         <section className="rounded-2xl liquid-glass p-4 flex items-center gap-3">
           <div
@@ -627,6 +759,11 @@ export default function OrderStatus() {
           </div>
         )}
       </main>
+
+      <UserProfileModal
+        isOpen={showProfileModal}
+        onClose={() => setShowProfileModal(false)}
+      />
     </div>
   );
 }

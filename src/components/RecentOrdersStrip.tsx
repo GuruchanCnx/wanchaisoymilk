@@ -55,7 +55,7 @@ export default function RecentOrdersStrip() {
           <div key={o.id} className="rounded-2xl bg-cream-soft border-2 border-forest/10 p-3">
             <div className="flex items-center justify-between mb-2">
               <div className="text-xs text-ink-muted">{shortId(o.id)} · {timeAgo(o.created_at, lang)}</div>
-              <div className="text-xs font-semibold text-forest capitalize">{o.status}</div>
+              <div className="text-xs font-semibold text-forest">{(t as any)[o.status] || o.status}</div>
             </div>
             <div className="text-sm text-ink line-clamp-2 mb-3">
               {o.items.map((i) => `${i.qty}× ${lang === 'th' ? i.name_th : i.name_en}`).join(', ')}

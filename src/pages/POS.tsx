@@ -19,13 +19,22 @@ import { baht, shortId, timeAgo } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PosDialPad from '../components/PosDialPad';
 import { useFoldableSpanning } from '../hooks/useFoldableSpanning';
+import {
+  applyQuickHapticPattern,
+  getCurrentQuickPattern,
+  type HapticQuickPattern,
+} from '../lib/haptics';
+import { useToast } from '../contexts/ToastContext';
+import { Activity, Zap } from 'lucide-react';
 
 export default function POS() {
   const { t, lang } = useLang();
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [sound, setSound] = useState(true);
   const [lastCount, setLastCount] = useState(0);
   const [showDialPad, setShowDialPad] = useState(false);
+  const [currentPattern, setCurrentPattern] = useState<HapticQuickPattern>(() => getCurrentQuickPattern());
 
   // Hook that detects if the foldable device is spanned across two screens
   // and automatically adds scroll-padding to the main content wrapper
@@ -115,6 +124,48 @@ export default function POS() {
           </div>
         </div>
       </header>
+
+      {/* POS Tactile Haptic Pattern Selection Interface */}
+      <div className="bg-forest-dark/95 border-b border-cream/10 px-4 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+        <div className="flex items-center gap-2 text-cream/80">
+          <Activity className="h-4 w-4 text-honey shrink-0" />
+          <span className="font-semibold text-honey">
+            {lang === 'th' ? 'การสั่นตอบสนอง (Haptics):' : 'Tactile Haptics:'}
+          </span>
+          <span className="text-[11px] text-cream/60 hidden md:inline">
+            {lang === 'th' ? 'สัมผัสการกดปุ่มคิดเงินและรับออเดอร์' : 'Dial pad & order action response'}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5 bg-black/30 p-1 rounded-xl border border-cream/10">
+          {(['Soft Tap', 'Strong Click', 'Double Pulse'] as const).map((pattern) => {
+            const isSelected = currentPattern === pattern;
+            return (
+              <button
+                key={pattern}
+                type="button"
+                onClick={() => {
+                  applyQuickHapticPattern(pattern);
+                  setCurrentPattern(pattern);
+                  showToast(
+                    lang === 'th' ? `ปรับรูปแบบการสั่นเป็น "${pattern}"` : `Haptic Set to ${pattern}`,
+                    lang === 'th' ? 'อัปเดตการตั้งค่าระบบสั่นส่วนกลางเรียบร้อย' : 'Global tactile pattern updated',
+                    'success'
+                  );
+                }}
+                className={`h-8 px-3 rounded-lg text-xs font-bold transition flex items-center gap-1.5 active:scale-95 ${
+                  isSelected
+                    ? 'bg-honey text-forest shadow-xs'
+                    : 'text-cream/70 hover:text-cream hover:bg-cream/10'
+                }`}
+              >
+                <Zap className={`h-3 w-3 ${isSelected ? 'text-forest' : 'text-honey'}`} />
+                <span>{pattern}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Main Content Wrapper with scroll-padding automatically managed by useFoldableSpanning */}
       <main

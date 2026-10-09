@@ -12,6 +12,7 @@ import {
   Award,
   Type,
   ShieldCheck,
+  Sliders,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useLang } from '../contexts/LanguageContext';
@@ -23,16 +24,18 @@ import { getLoyaltyProfile } from '../lib/loyalty';
 import LanguageToggle from './LanguageToggle';
 import MenuQrModal from './MenuQrModal';
 import UserProfileModal from './UserProfileModal';
+import AccessibilitySettingsMenu from './AccessibilitySettingsMenu';
 
 export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; label_th: string; label_en: string }[] }) {
   const { lang, t } = useLang();
   const { count, bumpKey } = useCart();
   const { isFolded, isDualScreen, toggleSimulatedFold, isSimulated } = useFoldable();
-  const { isElderMode, toggleElderMode } = useAccessibility();
+  const { isElderMode, isHighContrast } = useAccessibility();
   const loc = useLocation();
 
   const [showQrModal, setShowQrModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showAccessibilityMenu, setShowAccessibilityMenu] = useState(false);
   const [isCartShaking, setIsCartShaking] = useState(false);
   const [points, setPoints] = useState(() => getLoyaltyProfile().availablePoints);
 
@@ -105,30 +108,33 @@ export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; l
 
           {/* Right Side Controls */}
           <div className="duo-nav-right flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
-            {/* Elder / Large Text Accessibility Toggle */}
+            {/* Accessibility Settings Menu Trigger */}
             <button
               onClick={() => {
                 triggerHaptic('tap');
-                toggleElderMode();
+                setShowAccessibilityMenu(true);
               }}
               title={
-                isElderMode
+                isElderMode || isHighContrast
                   ? lang === 'th'
-                    ? 'โหมดอ่านง่ายเปิดอยู่ (คลิกเพื่อกลับขนาดปกติ)'
-                    : 'Large Text Active (Click for standard)'
-                  : lang === 'th'
-                  ? 'โหมดอ่านง่าย ตัวหนังสือใหญ่สำหรับผู้ใหญ่'
-                  : 'Elder-friendly Large Text Mode'
+                    ? 'การตั้งค่าการเข้าถึง (เปิดใช้งานอยู่)'
+                    : 'Accessibility Settings (Active)'
+                  : t.accessibilityMenu
               }
-              className={`h-9 px-2.5 sm:px-3 rounded-full text-xs font-bold flex items-center gap-1 transition ${
-                isElderMode
+              className={`h-9 px-2 sm:px-2.5 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                isHighContrast
+                  ? 'bg-black text-white shadow-sm ring-2 ring-white scale-105'
+                  : isElderMode
                   ? 'bg-amber-600 text-cream shadow-sm scale-105'
                   : 'liquid-pill text-forest hover:bg-forest/10'
               }`}
-              aria-label="Toggle text size mode"
+              aria-label={t.accessibilityMenu}
+              aria-expanded={showAccessibilityMenu}
             >
-              <Type className="h-3.5 w-3.5" />
-              <span className="text-[11px] font-mono">{isElderMode ? 'A+' : 'A'}</span>
+              <Sliders className="h-3.5 w-3.5" />
+              <span className="text-[11px] font-mono font-bold">
+                {isHighContrast ? 'AAA' : isElderMode ? 'A+' : 'A'}
+              </span>
             </button>
 
             {/* Menu QR Code Button */}
@@ -236,6 +242,17 @@ export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; l
               <button
                 onClick={() => {
                   triggerHaptic('tap');
+                  setShowAccessibilityMenu(true);
+                }}
+                className={`px-3 py-1.5 rounded-full text-xs liquid-pill font-semibold flex items-center gap-1 ${
+                  isElderMode || isHighContrast ? 'bg-amber-600/20 text-amber-900 font-bold' : 'text-forest'
+                }`}
+              >
+                <Sliders className="h-3 w-3" /> {lang === 'th' ? 'การเข้าถึง' : 'Accessibility'}
+              </button>
+              <button
+                onClick={() => {
+                  triggerHaptic('tap');
                   setShowQrModal(true);
                 }}
                 className="px-3 py-1.5 rounded-full text-xs text-forest liquid-pill font-semibold flex items-center gap-1"
@@ -273,6 +290,10 @@ export default function Nav({ scrollTargets }: { scrollTargets?: { id: string; l
       </header>
 
       {/* Global Modals Mounted from Nav */}
+      <AccessibilitySettingsMenu
+        isOpen={showAccessibilityMenu}
+        onClose={() => setShowAccessibilityMenu(false)}
+      />
       <MenuQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
       <UserProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
     </>

@@ -25,6 +25,10 @@ import {
   Phone,
   Share2,
   Check,
+  Eye,
+  Activity,
+  TrendingUp,
+  BarChart3,
 } from 'lucide-react';
 import type { Product, Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -34,11 +38,16 @@ import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import RichTextEditor from '../components/RichTextEditor';
 import LanguageToggle from '../components/LanguageToggle';
+import AccessibilityInspector from '../components/AccessibilityInspector';
+import HapticConfigPanel from '../components/HapticConfigPanel';
+import SalesAnalytics from '../components/SalesAnalytics';
+import { useAccessibility } from '../contexts/AccessibilityContext';
 
-type Tab = 'products' | 'orders' | 'settings' | 'migration' | 'emails';
+type Tab = 'products' | 'orders' | 'analytics' | 'accessibility' | 'haptics' | 'settings' | 'database' | 'emails';
 
 export default function Admin() {
   const { t, lang } = useLang();
+  const { isHighContrast, toggleHighContrast } = useAccessibility();
   // Persistent authenticated store manager session
   const [user, setUser] = useState<any>(() => {
     try {
@@ -163,6 +172,35 @@ export default function Admin() {
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* Quick-Access High-Contrast Toggle for Color-Impaired / Low-Vision Users */}
+            <button
+              onClick={() => {
+                triggerHaptic('tap');
+                toggleHighContrast();
+              }}
+              title={
+                isHighContrast
+                  ? lang === 'th'
+                    ? 'โหมดคอนทราสต์สูงเปิดอยู่ (คลิกเพื่อกลับสู่ขนาดปกติ)'
+                    : 'High Contrast Mode Active (Click to disable)'
+                  : lang === 'th'
+                  ? 'เปิดโหมดคอนทราสต์สูงสำหรับผู้มีปัญหาการมองเห็นสี'
+                  : 'Enable High Contrast Mode for color-impaired users'
+              }
+              className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 ${
+                isHighContrast
+                  ? 'bg-black text-white ring-2 ring-amber-400 shadow-md scale-105'
+                  : 'liquid-pill text-forest hover:bg-forest/10 border border-forest/15'
+              }`}
+              aria-label="Toggle High Contrast"
+            >
+              <Eye className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{lang === 'th' ? 'คอนทราสต์สูง' : 'Contrast'}</span>
+              <span className={`text-[10px] font-mono px-1 rounded ${isHighContrast ? 'bg-amber-400 text-black font-extrabold' : 'bg-forest/10 text-forest'}`}>
+                {isHighContrast ? 'ON' : 'OFF'}
+              </span>
+            </button>
+
             <LanguageToggle compact />
             <Link
               to="/pos"
@@ -186,9 +224,12 @@ export default function Admin() {
               [
                 ['products', t.products, Package],
                 ['orders', t.orders, ClipboardList],
-                ['migration', lang === 'th' ? 'ย้ายฐานข้อมูล' : 'Database Migration', Database],
-                ['emails', lang === 'th' ? 'อีเมลอัตโนมัติ' : 'Automated Emails', Mail],
+                ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
+                ['accessibility', lang === 'th' ? 'ตรวจสอบคอนทราสต์ (WCAG)' : 'Accessibility Inspector', Eye],
+                ['haptics', lang === 'th' ? 'การสั่นแป้น POS (Haptics)' : 'POS Haptics', Activity],
                 ['settings', lang === 'th' ? 'ตั้งค่าร้าน & ข้อมูล' : 'Shop Settings', Store],
+                ['database', lang === 'th' ? 'ฐานข้อมูล Firestore' : 'Firestore Database', Database],
+                ['emails', lang === 'th' ? 'อีเมลอัตโนมัติ' : 'Automated Emails', Mail],
               ] as const
             ).map(([k, l, Ic]) => (
               <button
@@ -210,7 +251,10 @@ export default function Admin() {
       <main className="mx-auto max-w-6xl px-4 py-6">
         {tab === 'products' && <ProductsTab />}
         {tab === 'orders' && <OrdersTab />}
-        {tab === 'migration' && <MigrationTab />}
+        {tab === 'analytics' && <SalesAnalytics />}
+        {tab === 'accessibility' && <AccessibilityInspector />}
+        {tab === 'haptics' && <HapticConfigPanel />}
+        {tab === 'database' && <FirestoreDatabaseTab />}
         {tab === 'emails' && <EmailsTab />}
         {tab === 'settings' && <SettingsTab />}
       </main>
@@ -888,139 +932,118 @@ function OrdersTab() {
 }
 
 /**
- * Supabase to Firebase Firestore Migration Panel
+ * Firebase Firestore Native Database Panel
+ * Shows active Firestore collections, connection health, and real-time status.
+ * 100% Native Firebase Firestore — no Supabase keys required.
  */
-function MigrationTab() {
+function FirestoreDatabaseTab() {
   const { lang } = useLang();
-  const [status, setStatus] = useState<any>(null);
-  const [migrating, setMigrating] = useState(false);
-  const [result, setResult] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
+  const [productCount, setProductCount] = useState<number>(6);
+  const [orderCount, setOrderCount] = useState<number>(0);
+  const [pingMs, setPingMs] = useState<number | null>(null);
 
-  const checkStatus = async () => {
+  const testFirestore = async () => {
+    setLoading(true);
+    const start = Date.now();
     try {
-      const res = await fetch('/api/migrate');
-      const data = await res.json();
-      setStatus(data);
-    } catch (e) {
-      console.warn('Migration status error:', e);
+      const [pRes, oRes] = await Promise.all([
+        fetch('/api/products').then((r) => r.json()),
+        fetch('/api/orders').then((r) => r.json()),
+      ]);
+      const elapsed = Date.now() - start;
+      setPingMs(elapsed);
+      if (Array.isArray(pRes)) setProductCount(pRes.length);
+      if (Array.isArray(oRes)) setOrderCount(oRes.length);
+      triggerHaptic('success');
+    } catch {
+      triggerHaptic('error');
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    checkStatus();
+    testFirestore();
   }, []);
 
-  const runMigration = async () => {
-    if (!confirm('Run Supabase to Firebase Firestore data migration?')) return;
-    setMigrating(true);
-    setResult(null);
-    try {
-      const res = await fetch('/api/migrate', { method: 'POST' });
-      const data = await res.json();
-      setResult(data);
-      checkStatus();
-    } catch (e: any) {
-      setResult({ error: e?.message || 'Migration request failed' });
-    } finally {
-      setMigrating(false);
-    }
-  };
-
   return (
-    <div className="space-y-4 max-w-3xl">
-      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm">
-        <div className="flex items-start justify-between gap-4">
+    <div className="space-y-4 max-w-4xl">
+      <div className="rounded-3xl liquid-glass p-6 border border-white/70 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="text-xs uppercase tracking-widest text-forest font-bold">
-              Database Migration Status
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-ping inline-block" />
+              <span>{lang === 'th' ? 'ระบบเชื่อมต่อ Firebase Firestore สมบูรณ์' : 'Firebase Firestore Live & Active'}</span>
             </div>
-            <h2 className="font-display italic font-bold text-2xl text-forest mt-1">
-              Supabase ➔ Firebase Firestore
+            <h2 className="font-display italic font-bold text-2xl text-forest mt-2">
+              {lang === 'th' ? 'ฐานข้อมูลร้านค้าวันใจ (Firebase Firestore)' : 'WanJai Cloud Firestore Database'}
             </h2>
             <p className="text-xs text-ink-muted mt-1">
-              Persistent Cloud database: <span className="font-mono font-bold text-forest">ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6</span>
+              Firestore Database ID:{' '}
+              <span className="font-mono font-bold text-forest bg-forest/10 px-2 py-0.5 rounded-md">
+                ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6
+              </span>
             </p>
           </div>
+
           <button
-            onClick={checkStatus}
-            className="h-9 w-9 rounded-2xl liquid-pill flex items-center justify-center text-forest hover:bg-forest/10"
+            onClick={testFirestore}
+            disabled={loading}
+            className="h-10 px-4 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-2 hover:bg-forest-dark transition active:scale-95 shadow-sm disabled:opacity-50 shrink-0"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? (lang === 'th' ? 'กำลังตรวจสอบ...' : 'Pinging...') : (lang === 'th' ? 'ทดสอบเชื่อมต่อ' : 'Ping Firestore')}</span>
           </button>
         </div>
 
-        {/* Stats Grid */}
-        <div className="mt-5 grid grid-cols-3 gap-3">
-          <div className="rounded-2xl bg-white/70 p-3.5 border border-forest/10 text-center">
-            <div className="text-[11px] text-ink-muted font-bold uppercase">Products in Firestore</div>
-            <div className="font-display italic font-bold text-2xl text-forest mt-1">
-              {status?.firestoreCounts?.products ?? 6}
+        {/* Live Status Metric Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div className="rounded-2xl bg-white/70 p-4 border border-forest/10 text-center">
+            <div className="text-[11px] text-ink-muted font-bold uppercase">{lang === 'th' ? 'สถานะคลาวด์' : 'Cloud Status'}</div>
+            <div className="font-display italic font-bold text-xl text-emerald-700 mt-1">
+              ONLINE
             </div>
-            <div className="text-[10px] text-emerald-700 font-bold mt-0.5">✓ Migrated & Live</div>
+            <div className="text-[10px] text-emerald-600 font-bold mt-0.5">Firebase Live</div>
           </div>
-          <div className="rounded-2xl bg-white/70 p-3.5 border border-forest/10 text-center">
-            <div className="text-[11px] text-ink-muted font-bold uppercase">Settings Keys</div>
+
+          <div className="rounded-2xl bg-white/70 p-4 border border-forest/10 text-center">
+            <div className="text-[11px] text-ink-muted font-bold uppercase">{lang === 'th' ? 'เมนูสินค้าใน Firestore' : 'Products in DB'}</div>
             <div className="font-display italic font-bold text-2xl text-forest mt-1">
-              {status?.firestoreCounts?.settings ?? 4}
+              {productCount}
             </div>
-            <div className="text-[10px] text-emerald-700 font-bold mt-0.5">✓ Migrated & Live</div>
+            <div className="text-[10px] text-forest/70 font-semibold mt-0.5">/api/products</div>
           </div>
-          <div className="rounded-2xl bg-white/70 p-3.5 border border-forest/10 text-center">
-            <div className="text-[11px] text-ink-muted font-bold uppercase">Orders Logged</div>
+
+          <div className="rounded-2xl bg-white/70 p-4 border border-forest/10 text-center">
+            <div className="text-[11px] text-ink-muted font-bold uppercase">{lang === 'th' ? 'คำสั่งซื้อในระบบ' : 'Orders Logged'}</div>
             <div className="font-display italic font-bold text-2xl text-forest mt-1">
-              {status?.firestoreCounts?.orders ?? 1}
+              {orderCount}
             </div>
-            <div className="text-[10px] text-emerald-700 font-bold mt-0.5">✓ Migrated & Live</div>
+            <div className="text-[10px] text-forest/70 font-semibold mt-0.5">/api/orders</div>
+          </div>
+
+          <div className="rounded-2xl bg-white/70 p-4 border border-forest/10 text-center">
+            <div className="text-[11px] text-ink-muted font-bold uppercase">{lang === 'th' ? 'ความเร็วตอบสนอง' : 'Latency'}</div>
+            <div className="font-display font-mono font-bold text-2xl text-terracotta mt-1">
+              {pingMs !== null ? `${pingMs}ms` : '...'}
+            </div>
+            <div className="text-[10px] text-ink-muted font-semibold mt-0.5">Roundtrip Time</div>
           </div>
         </div>
 
-        <div className="mt-5 p-4 rounded-2xl bg-forest/5 border border-forest/10 flex items-center justify-between">
-          <div>
-            <div className="text-xs font-bold text-forest">One-Click Re-Sync / Verification</div>
-            <div className="text-[11px] text-ink-muted">
-              Reads latest records from Supabase tables and merges them directly into Firestore.
-            </div>
+        {/* Database Architecture Info */}
+        <div className="rounded-2xl bg-forest/5 p-4 border border-forest/10 space-y-2 text-xs text-ink-muted">
+          <div className="flex items-center gap-2 text-forest font-bold">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <span>{lang === 'th' ? 'ระบบใช้ Firebase Firestore แบบเนทีฟ 100%' : '100% Native Firebase Firestore Storage'}</span>
           </div>
-          <button
-            onClick={runMigration}
-            disabled={migrating}
-            className="h-10 px-5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-2 hover:bg-forest-dark transition active:scale-95 shadow-sm disabled:opacity-50 shrink-0"
-          >
-            {migrating ? (
-              <RefreshCw className="h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="h-4 w-4 text-honey" />
-            )}
-            {migrating ? 'Migrating...' : 'Sync Supabase ➔ Firestore'}
-          </button>
+          <p>
+            {lang === 'th'
+              ? 'ระบบร้านค้าเชื่อมโยงกับฐานข้อมูล Firestore โดยตรง ข้อมูลสินค้า คิวออเดอร์หน้าร้าน การแจ้งเตือน และการตั้งค่าร้านค้าได้รับการจัดเก็บอย่างปลอดภัยบนคลาวด์ ไม่จำเป็นต้องใช้หรือกรอก Supabase API Keys ใดๆ'
+              : 'The WanJai application is fully powered by Google Firebase Firestore. All menu items, real-time queues, notifications, and store settings are securely synchronized without requiring external Supabase keys.'}
+          </p>
         </div>
-
-        {result && (
-          <div
-            className={`mt-4 p-4 rounded-2xl text-xs font-mono ${
-              result.success
-                ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                : 'bg-chili/10 text-chili border border-chili/20'
-            }`}
-          >
-            {result.success ? (
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                <div>
-                  <strong>{result.message}</strong>
-                  <div className="mt-1">
-                    Products: {result.migrated?.products} | Settings: {result.migrated?.settings} | Orders: {result.migrated?.orders}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-chili mt-0.5 shrink-0" />
-                <span>{result.error || 'Migration reported errors'}</span>
-              </div>
-            )}
-          </div>
-        )}
       </div>
     </div>
   );

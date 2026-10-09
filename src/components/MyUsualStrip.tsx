@@ -46,7 +46,10 @@ export default function MyUsualStrip() {
                 <img src={u.image_url} alt="" className="h-14 w-14 rounded-xl object-cover shrink-0" loading="lazy" />
                 <div className="min-w-0 flex-1">
                   <div className="font-thai font-semibold text-sm truncate">{lang === 'th' ? u.name_th : u.name_en}</div>
-                  <div className="text-xs opacity-70 truncate">{u.vessel} · {u.sweetness}{u.temp !== 'na' ? ` · ${u.temp}` : ''}</div>
+                  <div className="text-xs opacity-70 truncate">
+                    {(t as any)[u.vessel] || u.vessel} · {(t as any)[u.sweetness] || (t as any)[`${u.sweetness}Sugar`] || u.sweetness}
+                    {u.temp && u.temp !== 'na' ? ` · ${(t as any)[`${u.temp}Drink`] || u.temp}` : ''}
+                  </div>
                 </div>
               </div>
               <div className="mt-3 flex items-center justify-between">

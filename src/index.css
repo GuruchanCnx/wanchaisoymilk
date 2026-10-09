@@ -420,3 +420,60 @@ html.elder-mode .text-ink-muted {
   color: #382414 !important; /* Ultra high contrast for senior readability */
 }
 
+/* =========================================================
+   High-Contrast Mode for Color-Impaired / Low-Vision Users
+   ========================================================= */
+html.high-contrast-mode {
+  --color-ink: #000000 !important;
+  --color-ink-muted: #111111 !important;
+  --color-forest: #0D2B1D !important;
+  --color-terracotta: #B93800 !important;
+}
+
+html.high-contrast-mode body {
+  background-color: #FFFFFF !important;
+  color: #000000 !important;
+}
+
+html.high-contrast-mode .liquid-glass,
+html.high-contrast-mode .liquid-pill,
+html.high-contrast-mode .bg-cream-soft {
+  background: #FFFFFF !important;
+  border: 2px solid #000000 !important;
+  box-shadow: none !important;
+}
+
+html.high-contrast-mode .liquid-glass-dark,
+html.high-contrast-mode .bg-forest-dark {
+  background: #0D2318 !important;
+  border: 2px solid #FFFFFF !important;
+  color: #FFFFFF !important;
+}
+
+html.high-contrast-mode button,
+html.high-contrast-mode a {
+  border-width: 2px !important;
+}
+
+html.high-contrast-mode button:focus-visible,
+html.high-contrast-mode a:focus-visible,
+html.high-contrast-mode input:focus-visible {
+  outline: 3px solid #B93800 !important;
+  outline-offset: 2px !important;
+}
+
+html.high-contrast-mode .text-ink-muted,
+html.high-contrast-mode .text-cream\/70,
+html.high-contrast-mode .text-cream\/60,
+html.high-contrast-mode .text-cream\/80 {
+  color: #000000 !important;
+  font-weight: 600 !important;
+}
+
+html.high-contrast-mode .bg-forest .text-cream\/70,
+html.high-contrast-mode .bg-forest .text-cream\/60,
+html.high-contrast-mode .bg-forest-dark .text-cream\/70 {
+  color: #FFFFFF !important;
+}
+
+

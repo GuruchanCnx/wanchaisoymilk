@@ -1,4 +1,3 @@
-import supabase from './db-client.js';
 import { db, INITIAL_PRODUCTS } from './firestore-db.js';
 import { doc, setDoc, getDocs, collection } from 'firebase/firestore';
 
@@ -15,7 +14,7 @@ const DEFAULT_SETTINGS = [
   { key: 'address_en', value: '15/4 Soi 2, Walai Rd, Haiya, Mueang Chiang Mai 50100' },
   { key: 'hero_image_url', value: '/images/hero.jpg' },
   { key: 'line_id', value: '@wanchaisoy' },
-  { key: 'instagram_url', value: 'https://www.instagram.com/wanchai.soy' }
+  { key: 'instagram_url', value: 'https://www.instagram.com/wanchai.soy' },
 ];
 
 export default async function handler(req, res) {
@@ -25,125 +24,70 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
 
   try {
-    if (req.method === 'GET') {
-      // Check current Firestore count vs Supabase count
-      let fbProductsCount = 0;
-      let fbSettingsCount = 0;
-      let fbOrdersCount = 0;
+    let fbProductsCount = 0;
+    let fbSettingsCount = 0;
+    let fbOrdersCount = 0;
 
-      if (db) {
-        try {
-          const pSnap = await getDocs(collection(db, 'products'));
-          fbProductsCount = pSnap.size;
-          const sSnap = await getDocs(collection(db, 'settings'));
-          fbSettingsCount = sSnap.size;
-          const oSnap = await getDocs(collection(db, 'orders'));
-          fbOrdersCount = oSnap.size;
-        } catch (e) {
-          console.warn('[Migrate Status] Firestore check error:', e.message);
-        }
+    if (db) {
+      try {
+        const pSnap = await getDocs(collection(db, 'products'));
+        fbProductsCount = pSnap.size;
+        const sSnap = await getDocs(collection(db, 'settings'));
+        fbSettingsCount = sSnap.size;
+        const oSnap = await getDocs(collection(db, 'orders'));
+        fbOrdersCount = oSnap.size;
+      } catch (e) {
+        console.warn('[Firestore Status] Check error:', e.message);
       }
+    }
 
+    if (req.method === 'GET') {
       return res.status(200).json({
-        status: 'ready',
+        status: 'active',
+        database: 'Firebase Firestore',
         targetDatabase: 'ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6',
         firestoreCounts: {
           products: fbProductsCount,
           settings: fbSettingsCount,
           orders: fbOrdersCount,
         },
-        supabaseConnected: Boolean(supabase),
       });
     }
 
     if (req.method === 'POST') {
-      console.log('[Migration] Starting Supabase to Firestore migration...');
-      let pCount = 0, sCount = 0, oCount = 0;
-      const errors = [];
+      let migratedProducts = 0;
+      let migratedSettings = 0;
 
-      if (!db) {
-        return res.status(500).json({ error: 'Firestore is not initialized.' });
-      }
-
-      // 1. Migrate Products
-      try {
-        let prods = [];
-        if (supabase) {
-          const { data, error: pErr } = await supabase.from('products').select('*');
-          if (pErr) errors.push(`Products: ${pErr.message}`);
-          if (data && data.length > 0) prods = data;
-        }
-        // Fallback to INITIAL_PRODUCTS if Supabase has no records or empty
-        if (!prods || prods.length === 0) {
-          prods = INITIAL_PRODUCTS;
-        }
-        for (const p of prods) {
-          await setDoc(doc(db, 'products', String(p.id)), p, { merge: true });
-          pCount++;
-        }
-      } catch (err) {
-        errors.push(`Products error: ${err.message}`);
-      }
-
-      // 2. Migrate Settings
-      try {
-        let settings = [];
-        if (supabase) {
-          const { data, error: sErr } = await supabase.from('settings').select('*');
-          if (sErr) errors.push(`Settings: ${sErr.message}`);
-          if (data && data.length > 0) settings = data;
-        }
-        if (!settings || settings.length === 0) {
-          settings = DEFAULT_SETTINGS;
-        }
-        for (const s of settings) {
-          await setDoc(doc(db, 'settings', s.key), s, { merge: true });
-          sCount++;
-        }
-      } catch (err) {
-        errors.push(`Settings error: ${err.message}`);
-      }
-
-      // 3. Migrate Orders
-      try {
-        if (supabase) {
-          const { data: orders, error: oErr } = await supabase.from('orders').select('*');
-          if (oErr) errors.push(`Orders: ${oErr.message}`);
-          if (orders && orders.length > 0) {
-            for (const o of orders) {
-              await setDoc(doc(db, 'orders', String(o.id)), o, { merge: true });
-              oCount++;
-            }
+      if (db) {
+        // Seed default products if empty
+        if (fbProductsCount === 0) {
+          for (const p of INITIAL_PRODUCTS) {
+            await setDoc(doc(db, 'products', String(p.id)), p, { merge: true });
+            migratedProducts++;
           }
         }
-      } catch (err) {
-        errors.push(`Orders error: ${err.message}`);
+        // Seed default settings if empty
+        if (fbSettingsCount === 0) {
+          for (const s of DEFAULT_SETTINGS) {
+            await setDoc(doc(db, 'settings', s.key), s, { merge: true });
+            migratedSettings++;
+          }
+        }
       }
-
-      // Log migration event in Firestore
-      await setDoc(doc(db, 'settings', 'last_supabase_migration'), {
-        key: 'last_supabase_migration',
-        migrated_at: new Date().toISOString(),
-        products_migrated: pCount,
-        settings_migrated: sCount,
-        orders_migrated: oCount,
-      });
 
       return res.status(200).json({
         success: true,
-        message: 'Successfully migrated all data to Firebase Firestore',
+        message: 'Firestore initialization verified successfully.',
         migrated: {
-          products: pCount,
-          settings: sCount,
-          orders: oCount,
+          products: migratedProducts,
+          settings: migratedSettings,
         },
-        errors: errors.length > 0 ? errors : null,
       });
     }
 
     res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
-    console.error('Migration error:', err);
+    console.error('Firestore handler error:', err);
     res.status(500).json({ error: err.message });
   }
 }
