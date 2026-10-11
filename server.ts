@@ -32,6 +32,20 @@ app.all('/api/migrate', (req, res) => migrateHandler(req, res));
 app.all('/api/emails', (req, res) => emailsHandler(req, res));
 app.all('/api/upload', (req, res) => uploadHandler(req, res));
 
+// Admin diagnostic / protected endpoint
+app.all('/api/admin/restricted-resource', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({
+      error: 'HTTP 401 Unauthorized: The request requires user authentication or your session token has expired.',
+      statusCode: 401,
+      code: 'auth/unauthorized',
+      timestamp: new Date().toISOString(),
+    });
+  }
+  return res.json({ status: 'ok', message: 'Authorized access granted', user: 'admin' });
+});
+
 // Prevent API requests from ever falling through to HTML index fallback
 app.all('/api/*all', (_req, res) => {
   res.status(404).json({ error: 'API route not found' });

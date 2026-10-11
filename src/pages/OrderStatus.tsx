@@ -20,6 +20,9 @@ import {
   FileDown,
   Printer,
   Award,
+  Share2,
+  Copy,
+  Flame,
 } from 'lucide-react';
 import type { Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -37,6 +40,42 @@ import {
   playReadyChime,
   showPushNotification,
 } from '../lib/firebase';
+
+interface TrackStep {
+  id: 'received' | 'preparing' | 'ready';
+  labelTh: string;
+  labelEn: string;
+  subTh: string;
+  subEn: string;
+  icon: any;
+}
+
+const TRACK_STEPS: TrackStep[] = [
+  {
+    id: 'received',
+    labelTh: 'รับออเดอร์แล้ว',
+    labelEn: 'Received',
+    subTh: 'รายการเข้าระบบ รอคิวต้มสดตามลำดับ',
+    subEn: 'Order confirmed & queued for boiling',
+    icon: Check,
+  },
+  {
+    id: 'preparing',
+    labelTh: 'กำลังเตรียมต้มสด',
+    labelEn: 'Preparing',
+    subTh: 'หม้อต้มกำลังทำงาน บรรจุถุง/แก้วตามสูตร',
+    subEn: 'Simmering fresh soy milk & packing',
+    icon: ChefHat,
+  },
+  {
+    id: 'ready',
+    labelTh: 'พร้อมรับที่หน้าร้าน',
+    labelEn: 'Ready for Pickup',
+    subTh: 'ต้มสดใหม่พร้อมส่งมอบ แวะรับได้ที่ร้านวันใจ',
+    subEn: 'Packed and ready at WanJai cart, Walai Rd',
+    icon: Package,
+  },
+];
 
 const STEPS: { key: Order['status']; icon: any }[] = [
   { key: 'pending', icon: Clock },
@@ -247,6 +286,80 @@ export default function OrderStatus() {
     }
   };
 
+  /**
+   * Share Order handler using Web Share API with clipboard fallback
+   */
+  const handleShareOrder = async () => {
+    if (!order) return;
+    triggerHaptic('medium');
+    const shareUrl = window.location.href;
+    const currentStepText =
+      order.status === 'ready'
+        ? lang === 'th' ? 'พร้อมรับที่ร้านแล้ว!' : 'Ready for pickup'
+        : order.status === 'preparing'
+        ? lang === 'th' ? 'กำลังเตรียมต้มสด' : 'Preparing'
+        : lang === 'th' ? 'รับออเดอร์แล้ว' : 'Order received';
+
+    const shareTitle = `น้ำเต้าหู้วันใจ Wanchai Soy Milk - ออเดอร์ #${order.id}`;
+    const shareText =
+      lang === 'th'
+        ? `ติดตามสถานะออเดอร์ #${order.id} (${currentStepText}) ร้านวันใจ Soy ถนนวัวลาย เชียงใหม่`
+        : `Track order #${order.id} (${currentStepText}) at Wanchai Soy Milk, Chiang Mai`;
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+        });
+        triggerHaptic('success');
+        showToast(
+          lang === 'th' ? 'แชร์ออเดอร์สำเร็จ 📤' : 'Order Shared 📤',
+          lang === 'th' ? 'แชร์ลิงก์ติดตามสถานะออเดอร์เรียบร้อยแล้ว' : 'Order tracking link shared successfully',
+          'success'
+        );
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return; // User closed share sheet
+      }
+    }
+
+    // Fallback: Copy link and Order ID to clipboard
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      triggerHaptic('success');
+      showToast(
+        lang === 'th' ? 'คัดลอกลิงก์ออเดอร์แล้ว 📋' : 'Order Link Copied 📋',
+        lang === 'th'
+          ? `คัดลอกลิงก์ติดตามออเดอร์ #${order.id} เรียบร้อยแล้ว ส่งให้เพื่อนได้ทันที`
+          : `Order link #${order.id} copied to clipboard`,
+        'success'
+      );
+    } catch {
+      showToast(
+        lang === 'th' ? 'รหัสออเดอร์' : 'Order ID',
+        `#${order.id}`,
+        'info'
+      );
+    }
+  };
+
+  const handleCopyOrderId = async () => {
+    if (!order) return;
+    triggerHaptic('tap');
+    try {
+      await navigator.clipboard.writeText(String(order.id));
+      showToast(
+        lang === 'th' ? 'คัดลอกรหัสออเดอร์แล้ว 🏷️' : 'Order ID Copied 🏷️',
+        `#${order.id}`,
+        'success'
+      );
+    } catch {
+      showToast('Order ID', `#${order.id}`, 'info');
+    }
+  };
+
   const reorder = () => {
     if (!order) return;
     order.items.forEach((it) =>
@@ -315,27 +428,40 @@ export default function OrderStatus() {
             </div>
           </div>
 
-          {/* FCM Real-time Push Status Indicator */}
-          <button
-            onClick={enableFCM}
-            className={`h-9 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
-              fcmEnabled
-                ? 'bg-forest/15 text-forest border border-forest/20'
-                : 'bg-terracotta text-cream hover:bg-terracotta-dark'
-            }`}
-          >
-            {fcmEnabled ? (
-              <>
-                <BellRing className="h-3.5 w-3.5 text-forest" />
-                <span>{lang === 'th' ? 'แจ้งเตือนเปิดแล้ว' : 'Alerts Active'}</span>
-              </>
-            ) : (
-              <>
-                <Bell className="h-3.5 w-3.5" />
-                <span>{fcmLoading ? '...' : lang === 'th' ? 'เปิดแจ้งเตือน' : 'Enable Push'}</span>
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Share Order button via Web Share API */}
+            <button
+              type="button"
+              onClick={handleShareOrder}
+              title={lang === 'th' ? 'แชร์ออเดอร์นี้' : 'Share this order'}
+              className="h-9 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 bg-cream/90 border border-forest/20 text-forest hover:bg-white shadow-2xs"
+            >
+              <Share2 className="h-3.5 w-3.5 text-forest" />
+              <span className="hidden sm:inline">{t.shareOrder}</span>
+            </button>
+
+            {/* FCM Real-time Push Status Indicator */}
+            <button
+              onClick={enableFCM}
+              className={`h-9 px-3 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
+                fcmEnabled
+                  ? 'bg-forest/15 text-forest border border-forest/20'
+                  : 'bg-terracotta text-cream hover:bg-terracotta-dark'
+              }`}
+            >
+              {fcmEnabled ? (
+                <>
+                  <BellRing className="h-3.5 w-3.5 text-forest" />
+                  <span>{lang === 'th' ? 'แจ้งเตือนเปิดแล้ว' : 'Alerts Active'}</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="h-3.5 w-3.5" />
+                  <span>{fcmLoading ? '...' : lang === 'th' ? 'เปิดแจ้งเตือน' : 'Enable Push'}</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </header>
 
@@ -384,75 +510,181 @@ export default function OrderStatus() {
           </div>
         )}
 
-        {/* Big Status Card - iOS 27 Liquid Glass Style */}
+        {/* Dynamic 'Track My Order' Status Progress Card - iOS 27 Liquid Glass Style */}
         <div className="rounded-3xl liquid-glass-dark text-cream p-6 relative overflow-hidden liquid-specular shadow-2xl">
           <div className="relative z-10">
+            {/* Header / Badges */}
             <div className="flex items-center justify-between">
-              <span className="text-xs uppercase tracking-widest text-honey font-bold">
-                {t.status}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs uppercase tracking-widest text-honey font-bold">
+                  {t.trackOrder}
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white/10 text-cream/90">
+                  #{shortId(order.id)}
+                </span>
+              </div>
               <span className="text-[11px] text-cream/90 bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-400/30 flex items-center gap-1.5 shadow-xs">
                 <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping inline-block" />
-                <span className="font-mono text-[10px] uppercase font-bold text-emerald-300">Firebase Firestore Live</span>
+                <span className="font-mono text-[10px] uppercase font-bold text-emerald-300">Firestore Live</span>
               </span>
             </div>
 
-            <div className="font-display italic font-bold text-3xl sm:text-4xl mt-1.5 capitalize text-cream">
-              {order.status === 'pending' && (lang === 'th' ? 'รอชำระเงิน' : 'Waiting for payment')}
-              {order.status === 'paid' && (lang === 'th' ? 'ชำระแล้ว · รอคิวต้ม' : 'Payment received')}
-              {order.status === 'preparing' && (lang === 'th' ? 'กำลังเตรียมต้มสด' : 'Preparing your order')}
-              {order.status === 'ready' && (lang === 'th' ? 'พร้อมรับที่ร้านแล้ว!' : 'Ready for pickup')}
-              {order.status === 'done' && t.done}
+            {/* Dynamic Status Headline */}
+            <div className="font-display italic font-bold text-3xl sm:text-4xl mt-2 capitalize text-cream">
+              {order.status === 'pending' && (lang === 'th' ? 'รับออเดอร์แล้ว · รอชำระเงิน' : 'Received · Waiting for payment')}
+              {order.status === 'paid' && (lang === 'th' ? 'รับออเดอร์แล้ว · รอคิวต้ม' : 'Received · Payment Confirmed')}
+              {order.status === 'preparing' && (lang === 'th' ? 'กำลังเตรียมต้มสดและบรรจุ' : 'Preparing Fresh Batch')}
+              {order.status === 'ready' && (lang === 'th' ? 'พร้อมรับที่หน้าร้านแล้ว!' : 'Ready for Pickup')}
+              {order.status === 'done' && (lang === 'th' ? 'ส่งมอบเรียบร้อย' : 'Order Completed')}
               {order.status === 'cancelled' && t.cancelled}
             </div>
 
-            <div className="mt-2 flex items-center gap-2 text-cream/80 text-sm">
-              <Clock className="h-4 w-4 text-honey" />
-              <span>{t.pickupTime}:</span>
-              <strong className="text-cream">{order.pickup_time || '10-15 นาที'}</strong>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-cream/80 text-xs sm:text-sm">
+              <div className="flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-honey" />
+                <span>{t.pickupTime}:</span>
+                <strong className="text-cream">{order.pickup_time || '10-15 นาที'}</strong>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-cream/50">·</span>
+                <span>{lang === 'th' ? 'ยอดรวม' : 'Total'}:</span>
+                <strong className="text-honey font-bold">{baht(order.total)}</strong>
+              </div>
             </div>
 
-            {/* Progress Track */}
-            <div className="mt-6 grid grid-cols-5 gap-1.5">
-              {STEPS.map((s, i) => (
-                <div
-                  key={s.key}
-                  className={`h-2 rounded-full transition-all duration-500 ${
-                    i <= currentIndex ? 'bg-honey shadow-[0_0_8px_rgba(232,180,74,0.6)]' : 'bg-cream/15'
-                  }`}
-                />
-              ))}
-            </div>
+            {/* DYNAMIC 'TRACK MY ORDER' PROGRESS BAR (Steps: Received, Preparing, Ready for Pickup) */}
+            <div className="mt-6">
+              {(() => {
+                // Determine active index among the 3 key phases
+                const trackIdx =
+                  order.status === 'cancelled'
+                    ? -1
+                    : order.status === 'pending' || order.status === 'paid'
+                    ? 0
+                    : order.status === 'preparing'
+                    ? 1
+                    : 2; // ready or done
 
-            <div className="mt-4 flex items-center justify-between gap-1">
-              {STEPS.map((s, i) => {
-                const Ic = s.icon;
+                const percent =
+                  order.status === 'cancelled'
+                    ? 0
+                    : trackIdx === 0
+                    ? 33
+                    : trackIdx === 1
+                    ? 66
+                    : 100;
+
                 return (
-                  <div
-                    key={s.key}
-                    className={`flex flex-col items-center gap-1 text-[10px] ${
-                      i <= currentIndex ? 'text-cream font-bold' : 'text-cream/40'
-                    }`}
-                  >
-                    <div
-                      className={`h-8 w-8 rounded-full flex items-center justify-center transition ${
-                        i <= currentIndex
-                          ? 'bg-honey text-forest shadow-sm'
-                          : 'bg-cream/10 text-cream/50'
-                      }`}
-                    >
-                      <Ic className="h-4 w-4" />
+                  <div className="space-y-4">
+                    {/* Continuous Progress Bar Line */}
+                    <div className="relative">
+                      {/* Background Bar */}
+                      <div className="h-3 w-full rounded-full bg-cream/15 overflow-hidden p-0.5">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-honey via-amber-400 to-emerald-400 transition-all duration-700 ease-out shadow-[0_0_12px_rgba(232,180,74,0.7)]"
+                          style={{ width: `${percent}%` }}
+                        />
+                      </div>
+
+                      {/* Percentage Tag */}
+                      <div className="mt-1.5 flex justify-between text-[11px] font-mono text-cream/70">
+                        <span>{lang === 'th' ? 'ความคืบหน้า' : 'Progress'}</span>
+                        <span className="font-bold text-honey">{percent}%</span>
+                      </div>
                     </div>
-                    <span>
-                      {s.key === 'pending' && t.pending}
-                      {s.key === 'paid' && t.paid}
-                      {s.key === 'preparing' && t.preparing}
-                      {s.key === 'ready' && t.ready}
-                      {s.key === 'done' && t.done}
-                    </span>
+
+                    {/* Step Nodes: Received, Preparing, Ready for Pickup */}
+                    <div className="grid grid-cols-3 gap-2">
+                      {TRACK_STEPS.map((step, idx) => {
+                        const StepIcon = step.icon;
+                        const isDone = idx < trackIdx || (idx === 2 && (order.status === 'ready' || order.status === 'done'));
+                        const isCurrent = idx === trackIdx;
+                        const isPending = idx > trackIdx;
+
+                        return (
+                          <div
+                            key={step.id}
+                            className={`rounded-2xl p-2.5 sm:p-3 transition-all duration-300 border flex flex-col justify-between ${
+                              isCurrent
+                                ? 'bg-cream/15 border-honey/60 shadow-lg shadow-honey/10'
+                                : isDone
+                                ? 'bg-emerald-950/40 border-emerald-400/30'
+                                : 'bg-cream/5 border-white/10 opacity-60'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div
+                                className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all ${
+                                  isDone
+                                    ? 'bg-emerald-400 text-forest shadow-xs'
+                                    : isCurrent
+                                    ? 'bg-honey text-forest animate-pulse shadow-md'
+                                    : 'bg-white/10 text-white/50'
+                                }`}
+                              >
+                                <StepIcon className="h-4 w-4" />
+                              </div>
+
+                              <span
+                                className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full ${
+                                  isDone
+                                    ? 'bg-emerald-400/20 text-emerald-300'
+                                    : isCurrent
+                                    ? 'bg-honey/20 text-honey animate-pulse'
+                                    : 'bg-white/10 text-white/40'
+                                }`}
+                              >
+                                {idx + 1}/3
+                              </span>
+                            </div>
+
+                            <div>
+                              <div
+                                className={`font-thai font-bold text-xs sm:text-sm leading-tight ${
+                                  isCurrent ? 'text-honey' : isDone ? 'text-emerald-300' : 'text-cream/70'
+                                }`}
+                              >
+                                {lang === 'th' ? step.labelTh : step.labelEn}
+                              </div>
+                              <div className="text-[10px] sm:text-[11px] text-cream/70 mt-1 leading-snug line-clamp-2">
+                                {lang === 'th' ? step.subTh : step.subEn}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
-              })}
+              })()}
+            </div>
+
+            {/* Quick Share Order & Copy ID Action Bar */}
+            <div className="mt-5 pt-4 border-t border-white/15 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleShareOrder}
+                  className="h-9 px-3.5 rounded-full bg-honey hover:bg-honey-dark text-forest font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-md"
+                >
+                  <Share2 className="h-3.5 w-3.5" />
+                  <span>{t.shareOrder}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCopyOrderId}
+                  className="h-9 px-3 rounded-full bg-white/10 hover:bg-white/20 text-cream text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 border border-white/20"
+                  title={t.copyOrderId}
+                >
+                  <Copy className="h-3.5 w-3.5 text-honey" />
+                  <span className="font-mono text-[11px]">#{order.id}</span>
+                </button>
+              </div>
+
+              <div className="text-[11px] text-cream/70">
+                {lang === 'th' ? 'ส่งต่อสถานะให้เพื่อนได้ทันที' : 'Share live status with friends'}
+              </div>
             </div>
           </div>
         </div>
@@ -738,12 +970,20 @@ export default function OrderStatus() {
         </section>
 
         {/* Action Buttons */}
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <button
+            type="button"
             onClick={reorder}
             className="h-12 rounded-full bg-terracotta text-cream font-bold text-sm flex items-center justify-center gap-2 shadow-md hover:bg-terracotta-dark active:scale-95 transition"
           >
             <RefreshCw className="h-4 w-4" /> {t.reorder}
+          </button>
+          <button
+            type="button"
+            onClick={handleShareOrder}
+            className="h-12 rounded-full bg-honey hover:bg-honey-dark text-forest font-bold text-sm flex items-center justify-center gap-2 shadow-md active:scale-95 transition"
+          >
+            <Share2 className="h-4 w-4" /> {t.shareOrder}
           </button>
           <Link
             to="/"

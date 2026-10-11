@@ -7,6 +7,8 @@ import Admin from './pages/Admin';
 import POS from './pages/POS';
 import { FoldableProvider } from './contexts/FoldableContext';
 import { useFoldableSpanning } from './hooks/useFoldableSpanning';
+import SessionExpiredModal from './components/SessionExpiredModal';
+import AuthDiagnosticPanel from './components/AuthDiagnosticPanel';
 
 function AppShell() {
   // Hook that detects if the foldable device is spanned across two screens
@@ -26,6 +28,10 @@ function AppShell() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/pos" element={<POS />} />
       </Routes>
+
+      {/* Global 401 Session Expired Modal & Auth Diagnostics */}
+      <SessionExpiredModal />
+      <AuthDiagnosticPanel />
     </div>
   );
 }
