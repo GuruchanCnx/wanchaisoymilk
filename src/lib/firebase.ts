@@ -101,15 +101,49 @@ export function subscribeToAuthErrors(listener: AuthErrorListener) {
 }
 
 /**
+ * Attempt silent session token refresh using Firebase Auth
+ * Returns the fresh JWT token string on success, or null on failure.
+ */
+export async function attemptSilentTokenRefresh(): Promise<string | null> {
+  if (!auth?.currentUser) {
+    return null;
+  }
+  try {
+    const freshToken = await auth.currentUser.getIdToken(true);
+    console.info(
+      `%c[Auth Guard] Silently refreshed session token for ${auth.currentUser.email || auth.currentUser.uid}.`,
+      'color: #10b981; font-weight: bold;'
+    );
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('auth:token-refreshed', {
+          detail: {
+            token: freshToken,
+            userId: auth.currentUser.uid,
+            email: auth.currentUser.email,
+          },
+        })
+      );
+    }
+    return freshToken;
+  } catch (refreshErr) {
+    console.warn('[Auth Guard] Silent token refresh failed:', refreshErr);
+    return null;
+  }
+}
+
+/**
  * Global Firebase Error Handler:
  * Intercepts 401 Unauthorized codes and permission-denied errors,
- * logs detailed request context for debugging, and notifies subscribers.
+ * logs detailed request context for debugging, and silently refreshes
+ * the session token when possible before prompting SessionExpiredModal.
  */
 export function handleFirebaseError(
   error: unknown,
   operationType: OperationType | string = OperationType.WRITE,
   path: string | null = null,
-  statusCode?: number
+  statusCode?: number,
+  options?: { forcePromptModal?: boolean }
 ): FirestoreErrorInfo {
   const errMsg = error instanceof Error ? error.message : String(error);
   const is401 =
@@ -138,7 +172,7 @@ export function handleFirebaseError(
     timestamp: new Date().toISOString(),
   };
 
-  // Structured diagnostic console output (using console.warn/info for clean diagnostics without crashing)
+  // Structured diagnostic console output
   console.groupCollapsed(
     `%c[Firebase Error Handler] ${is401 ? '🚨 401 UNAUTHORIZED' : '⚠️ Firebase Error'} - ${operationType.toUpperCase()} ${path || ''}`,
     is401
@@ -151,21 +185,43 @@ export function handleFirebaseError(
   console.groupEnd();
 
   if (is401) {
-    // Notify listeners (such as SessionExpiredModal and useAuthDiagnostic)
-    authErrorListeners.forEach((fn) => {
-      try {
-        fn(errInfo);
-      } catch (e) {
-        console.warn('Error listener exception:', e);
-      }
-    });
+    const notifySessionExpired = () => {
+      authErrorListeners.forEach((fn) => {
+        try {
+          fn(errInfo);
+        } catch (e) {
+          console.warn('Error listener exception:', e);
+        }
+      });
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('auth:session-expired', {
-          detail: errInfo,
-        })
-      );
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('auth:session-expired', {
+            detail: errInfo,
+          })
+        );
+      }
+    };
+
+    if (options?.forcePromptModal) {
+      // Intentionally prompting modal (e.g. simulation or after failed refresh)
+      notifySessionExpired();
+    } else if (currentUser) {
+      // Attempt silent refresh first to spare user from an unnecessary modal
+      attemptSilentTokenRefresh().then((refreshedToken) => {
+        if (!refreshedToken) {
+          // Silent refresh failed -> prompt modal as last resort
+          notifySessionExpired();
+        } else {
+          console.info(
+            '%c[Auth Guard] 401 handled by silent token refresh. SessionExpiredModal suppressed.',
+            'color: #10b981;'
+          );
+        }
+      });
+    } else {
+      // No logged in user -> prompt modal
+      notifySessionExpired();
     }
   }
 
@@ -173,13 +229,40 @@ export function handleFirebaseError(
 }
 
 /**
- * Wrapper for API fetch requests that automatically intercepts 401 Unauthorized codes
+ * Wrapper for API fetch requests that automatically intercepts 401 Unauthorized codes,
+ * silently attempts token refresh and request retry before surfacing SessionExpiredModal.
  */
 export async function authFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   const targetUrl = typeof input === 'string' ? input : input.toString();
   try {
     const res = await fetch(input, init);
     if (res.status === 401) {
+      // 1. Try silent token refresh first
+      if (auth?.currentUser) {
+        try {
+          const freshToken = await attemptSilentTokenRefresh();
+          if (freshToken) {
+            // Retry the request with the refreshed token in Authorization header
+            const retryInit = { ...init };
+            const headers = new Headers(retryInit.headers || {});
+            headers.set('Authorization', `Bearer ${freshToken}`);
+            retryInit.headers = headers;
+
+            const retryRes = await fetch(input, retryInit);
+            if (retryRes.status !== 401) {
+              console.info(
+                `%c[authFetch] Request to ${targetUrl} recovered from 401 via silent token refresh!`,
+                'color: #10b981; font-weight: bold;'
+              );
+              return retryRes;
+            }
+          }
+        } catch (silentErr) {
+          console.warn('[authFetch] Silent token retry failed:', silentErr);
+        }
+      }
+
+      // 2. If silent refresh failed or user is not logged in, prompt modal
       let bodyText = '';
       try {
         const cloned = res.clone();
@@ -189,7 +272,8 @@ export async function authFetch(input: RequestInfo | URL, init?: RequestInit): P
         new Error(`HTTP 401 Unauthorized: ${bodyText || 'Session expired or authentication credentials required'}`),
         OperationType.AUTH,
         targetUrl,
-        401
+        401,
+        { forcePromptModal: true }
       );
     }
     return res;
@@ -311,3 +395,5 @@ export function showPushNotification(title: string, options?: NotificationOption
     }
   }
 }
+
+export { runFirestoreDiagnostic } from './firestore-diagnostic';

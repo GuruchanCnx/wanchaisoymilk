@@ -41,6 +41,7 @@ export default function AuthDiagnosticPanel() {
     signOutUser,
     simulate401Error,
     testFirestorePing,
+    runConfigDiagnostic,
   } = useAuthDiagnostic();
 
   const handleCopyReport = () => {
@@ -225,7 +226,17 @@ export default function AuthDiagnosticPanel() {
                     <Key className="h-3.5 w-3.5" />
                     <span>Diagnostic Test Actions</span>
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={runConfigDiagnostic}
+                      className="h-10 px-3 rounded-xl bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition flex items-center justify-center gap-1.5 shadow-xs"
+                      title="Validate credentials in firebase-applet-config.json and live Firestore"
+                    >
+                      <Database className="h-3.5 w-3.5 text-honey" />
+                      <span>Validate Config & DB</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={simulate401Error}
@@ -233,22 +244,22 @@ export default function AuthDiagnosticPanel() {
                       title="Trigger synthetic 401 to test SessionExpiredModal"
                     >
                       <AlertOctagon className="h-3.5 w-3.5" />
-                      <span>Test 401 Error</span>
+                      <span>Test 401 Modal</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={testFirestorePing}
-                      className="h-10 px-3 rounded-xl bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition flex items-center justify-center gap-1.5 shadow-xs"
+                      className="h-10 px-3 rounded-xl bg-forest/80 text-cream text-xs font-bold hover:bg-forest transition flex items-center justify-center gap-1.5 shadow-xs"
                     >
-                      <Database className="h-3.5 w-3.5" />
+                      <Activity className="h-3.5 w-3.5" />
                       <span>Ping Firestore</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={loginWithGoogle}
-                      className="h-10 px-3 rounded-xl bg-cream border border-forest/30 text-forest text-xs font-bold hover:bg-forest/10 transition flex items-center justify-center gap-1.5 shadow-xs col-span-2 sm:col-span-1"
+                      className="h-10 px-3 rounded-xl bg-cream border border-forest/30 text-forest text-xs font-bold hover:bg-forest/10 transition flex items-center justify-center gap-1.5 shadow-xs"
                     >
                       <Shield className="h-3.5 w-3.5 text-honey" />
                       <span>Google Auth</span>

@@ -32,6 +32,7 @@ import { triggerHaptic } from '../lib/haptics';
 import { useToast } from '../contexts/ToastContext';
 import { downloadOrderReceiptPdf, printOrderReceipt } from '../lib/pdf-receipt';
 import UserProfileModal from '../components/UserProfileModal';
+import OrderProgressNotification from '../components/OrderProgressNotification';
 import {
   db,
   doc,
@@ -136,6 +137,22 @@ export default function OrderStatus() {
     prevStatusRef.current = newOrder.status;
   };
 
+  const handleSimulateStatusUpdate = async (newStatus: Order['status']) => {
+    if (!order) return;
+    const updatedOrder = { ...order, status: newStatus };
+    setOrder(updatedOrder);
+    handleStatusChange(updatedOrder);
+    try {
+      await fetch(`/api/orders?id=${order.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+    } catch (err) {
+      console.warn('Simulate status sync error:', err);
+    }
+  };
+
   // Real-time Firestore listener + polling fallback
   useEffect(() => {
     loadOrder();
@@ -200,7 +217,11 @@ export default function OrderStatus() {
         }).catch(() => {});
       }
     } else {
-      alert(result.error || 'Could not enable push notifications');
+      showToast(
+        lang === 'th' ? 'การแจ้งเตือน' : 'Notification Notice',
+        result.error || (lang === 'th' ? 'ไม่สามารถเปิดการแจ้งเตือนได้ในเบราว์เซอร์นี้' : 'Could not enable push notifications'),
+        'info'
+      );
     }
   };
 
@@ -466,6 +487,13 @@ export default function OrderStatus() {
       </header>
 
       <main className="mx-auto max-w-2xl px-4 py-6 space-y-4">
+        {/* Real-time Order Progress Notification Component (Elder & Child Friendly, Voice-Ready) */}
+        <OrderProgressNotification
+          order={order}
+          lang={lang as 'th' | 'en'}
+          onStatusUpdate={handleSimulateStatusUpdate}
+        />
+
         {/* Ready for Pickup Live Banner (Triggered by FCM / Firestore) */}
         {order.status === 'ready' && (
           <div className="rounded-3xl liquid-glass-accent p-5 text-cream relative overflow-hidden shadow-xl animate-pulse">

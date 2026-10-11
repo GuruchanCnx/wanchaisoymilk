@@ -67,9 +67,17 @@ export default function SessionExpiredModal({
     };
     window.addEventListener('auth:session-expired', handleAuthExpired);
 
+    // 3. Window event listener for auth:token-refreshed (auto-dismiss on silent recovery)
+    const handleTokenRefreshed = () => {
+      setInternalIsOpen(false);
+      setActiveError(null);
+    };
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+
     return () => {
       unsub();
       window.removeEventListener('auth:session-expired', handleAuthExpired);
+      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
     };
   }, []);
 
@@ -86,6 +94,21 @@ export default function SessionExpiredModal({
     triggerHaptic('medium');
     setIsLoggingIn(true);
     try {
+      if (auth?.currentUser) {
+        // Attempt quick silent refresh first
+        const refreshedToken = await auth.currentUser.getIdToken(true);
+        if (refreshedToken) {
+          triggerHaptic('success');
+          showToast(
+            lang === 'th' ? 'ต่ออายุเซสชันสำเร็จ! 🌿' : 'Session Restored! 🌿',
+            lang === 'th' ? 'โทเคนได้รับการรีเฟรชเรียบร้อยแล้ว' : 'Token successfully refreshed silently.',
+            'success'
+          );
+          handleClose();
+          return;
+        }
+      }
+
       if (auth) {
         // Try Google Sign-In popup
         const userCredential = await signInWithPopup(auth, googleProvider);

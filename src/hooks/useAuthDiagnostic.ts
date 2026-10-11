@@ -124,11 +124,22 @@ export function useAuthDiagnostic() {
     };
     window.addEventListener('auth:session-expired', handleWindowAuthExpired);
 
+    // Listen to silent token refresh events
+    const handleWindowTokenRefreshed = (e: Event) => {
+      const customEvt = e as CustomEvent<{ token: string; userId: string; email: string }>;
+      if (customEvt.detail) {
+        setIdToken(customEvt.detail.token);
+        addLog('success', `Silent session token refresh succeeded (User: ${customEvt.detail.email || customEvt.detail.userId})`);
+      }
+    };
+    window.addEventListener('auth:token-refreshed', handleWindowTokenRefreshed);
+
     return () => {
       unsubAuth();
       unsubToken();
       unsubError();
       window.removeEventListener('auth:session-expired', handleWindowAuthExpired);
+      window.removeEventListener('auth:token-refreshed', handleWindowTokenRefreshed);
     };
   }, [addLog]);
 
@@ -200,7 +211,8 @@ export function useAuthDiagnostic() {
       new Error('HTTP 401 Unauthorized: The request requires user authentication or your session token has expired.'),
       OperationType.AUTH,
       '/api/admin/restricted-resource',
-      401
+      401,
+      { forcePromptModal: true }
     );
   }, [addLog]);
 
@@ -228,6 +240,24 @@ export function useAuthDiagnostic() {
     }
   }, [addLog]);
 
+  // Run full credential and connection diagnostic
+  const runConfigDiagnostic = useCallback(async () => {
+    addLog('info', 'Running full credentials & Firestore connectivity diagnostic...');
+    try {
+      const { runFirestoreDiagnostic } = await import('../lib/firestore-diagnostic');
+      const rep = await runFirestoreDiagnostic();
+      if (rep.connection.isLive) {
+        addLog('success', `Diagnostic passed: ${rep.summary}`, rep);
+      } else {
+        addLog('warn', `Diagnostic notice: ${rep.summary}`, rep);
+      }
+      return rep;
+    } catch (err: any) {
+      addLog('error', `Diagnostic execution failed: ${err?.message || err}`);
+      return null;
+    }
+  }, [addLog]);
+
   const clearAuthError = useCallback(() => {
     setLastAuthError(null);
   }, []);
@@ -245,6 +275,7 @@ export function useAuthDiagnostic() {
     signOutUser,
     simulate401Error,
     testFirestorePing,
+    runConfigDiagnostic,
     clearAuthError,
   };
 }

@@ -1,6 +1,21 @@
 import { useCallback, useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Clock, Sparkles, Instagram, Phone, ChevronDown, ExternalLink, Copy, Check, QrCode, Mic } from 'lucide-react';
+import {
+  MapPin,
+  Clock,
+  Sparkles,
+  Instagram,
+  Phone,
+  ChevronDown,
+  ExternalLink,
+  Copy,
+  Check,
+  QrCode,
+  Mic,
+  Search,
+  X,
+  Filter,
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -26,6 +41,8 @@ export default function Home() {
   const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [settings, setSettings] = useState<Record<string, any>>(() => cacheGet('settings', 60_000) || {});
   const [copiedCoords, setCopiedCoords] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'bestsellers' | 'drinks' | 'snacks'>('all');
 
   // Exact coordinates: 18°46'47.4"N 98°59'04.1"E (Lat: 18.779833, Lng: 98.984472)
   const coordsText = '18°46\'47.4"N 98°59\'04.1"E';
@@ -59,6 +76,44 @@ export default function Home() {
   const drinks = products.filter((p) => p.category === 'drinks');
   const snacks = products.filter((p) => p.category === 'snacks');
   const bestsellers = products.filter((p) => ['soy-milk', 'cow-milk', 'ginger-tea'].includes(p.slug));
+
+  const isFilteringActive = searchQuery.trim().length > 0 || selectedCategory !== 'all';
+
+  const filteredProducts = products.filter((p) => {
+    // Category check
+    if (selectedCategory === 'drinks' && p.category !== 'drinks') return false;
+    if (selectedCategory === 'snacks' && p.category !== 'snacks') return false;
+    if (selectedCategory === 'bestsellers' && !['soy-milk', 'cow-milk', 'ginger-tea'].includes(p.slug)) return false;
+
+    // Search query check
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const matchNameTh = p.name_th?.toLowerCase().includes(q);
+    const matchNameEn = p.name_en?.toLowerCase().includes(q);
+    const matchDescTh = p.description_th?.toLowerCase().includes(q);
+    const matchDescEn = p.description_en?.toLowerCase().includes(q);
+    const matchCategory = p.category?.toLowerCase().includes(q);
+    const matchSlug = p.slug?.toLowerCase().includes(q);
+
+    // Common synonyms / search terms in Thai & English
+    const matchDrinkSynonyms =
+      (q.includes('น้ำ') || q.includes('นม') || q.includes('เต้าหู้') || q.includes('ขิง') || q.includes('ดื่ม') || q.includes('soy') || q.includes('milk') || q.includes('tea')) &&
+      p.category === 'drinks';
+    const matchSnackSynonyms =
+      (q.includes('ของว่าง') || q.includes('ขนม') || q.includes('ปาท่องโก๋') || q.includes('ซาลาเปา') || q.includes('snack') || q.includes('patongko') || q.includes('bun')) &&
+      p.category === 'snacks';
+
+    return (
+      matchNameTh ||
+      matchNameEn ||
+      matchDescTh ||
+      matchDescEn ||
+      matchCategory ||
+      matchSlug ||
+      matchDrinkSynonyms ||
+      matchSnackSynonyms
+    );
+  });
 
   const shopStatus = settings.shop_status || 'open';
   const shopAddress = lang === 'th'
@@ -207,35 +262,194 @@ export default function Home() {
         <MyUsualStrip />
         <RecentOrdersStrip />
 
-        {/* Bestsellers */}
-        <section id="bestsellers" className="mb-12">
-          <SectionHeading eyebrow={t.bestsellers} title={lang === 'th' ? 'อันดับหนึ่งของร้าน' : 'Our bestsellers'} />
-          {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 apple-duo-grid">
-              {bestsellers.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
+        {/* Search Input Bar (Elder & Child Friendly, Instant Filter by Name or Category) */}
+        <section id="menu-search" className="mb-8">
+          <div className="rounded-3xl liquid-glass border border-white/60 p-4 sm:p-5 shadow-sm">
+            <div className="relative flex items-center">
+              <Search className="absolute left-4 h-5 w-5 text-forest/70 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={
+                  lang === 'th'
+                    ? '🔍 ค้นหาเมนู เช่น น้ำเต้าหู้, ปาท่องโก๋, นมสด, น้ำขิง...'
+                    : '🔍 Search menu: Soy milk, Patongko, Cow milk, Ginger...'
+                }
+                className="w-full h-13 pl-12 pr-28 rounded-2xl bg-white/90 border border-forest/20 text-forest text-base sm:text-lg font-medium placeholder:text-ink-muted/70 focus:outline-none focus:ring-2 focus:ring-forest focus:border-transparent transition shadow-xs"
+              />
+              <div className="absolute right-2.5 flex items-center gap-1.5">
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic('tap');
+                      setSearchQuery('');
+                    }}
+                    className="h-9 w-9 rounded-xl bg-forest/10 hover:bg-forest/20 flex items-center justify-center text-forest transition"
+                    aria-label="Clear search"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setVoiceModalOpen(true);
+                  }}
+                  title={lang === 'th' ? 'ค้นหาด้วยเสียง' : 'Voice Search'}
+                  className="h-9 px-2.5 rounded-xl bg-terracotta text-cream flex items-center gap-1 text-xs font-bold hover:bg-terracotta-dark transition shadow-2xs"
+                >
+                  <Mic className="h-3.5 w-3.5 text-honey animate-pulse" />
+                  <span className="hidden sm:inline">{lang === 'th' ? 'พูดสั่ง' : 'Voice'}</span>
+                </button>
+              </div>
             </div>
-          )}
+
+            {/* Quick Category Filter Pills */}
+            <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <span className="text-xs font-bold text-ink-muted uppercase tracking-wider shrink-0 flex items-center gap-1">
+                <Filter className="h-3 w-3 text-forest" />
+                <span className="hidden sm:inline">{lang === 'th' ? 'หมวดหมู่:' : 'Filter:'}</span>
+              </span>
+              {[
+                { id: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
+                { id: 'bestsellers', labelTh: '⭐ เมนูขายดี', labelEn: '⭐ Bestsellers' },
+                { id: 'drinks', labelTh: '🥛 เครื่องดื่ม', labelEn: '🥛 Drinks' },
+                { id: 'snacks', labelTh: '🥟 ของว่าง', labelEn: '🥟 Snacks' },
+              ].map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('tap');
+                    setSelectedCategory(cat.id as any);
+                  }}
+                  className={`h-9 px-4 rounded-full text-xs font-bold transition active:scale-95 shrink-0 flex items-center gap-1 ${
+                    selectedCategory === cat.id
+                      ? 'bg-forest text-cream shadow-sm ring-1 ring-forest'
+                      : 'bg-white/80 border border-forest/15 text-forest hover:bg-forest/10'
+                  }`}
+                >
+                  {lang === 'th' ? cat.labelTh : cat.labelEn}
+                </button>
+              ))}
+
+              {isFilteringActive && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('tap');
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                  }}
+                  className="h-9 px-3 rounded-full text-xs font-medium text-terracotta hover:bg-terracotta/10 transition shrink-0 ml-auto flex items-center gap-1"
+                >
+                  <X className="h-3 w-3" />
+                  <span>{lang === 'th' ? 'ล้างตัวกรอง' : 'Reset'}</span>
+                </button>
+              )}
+            </div>
+          </div>
         </section>
 
-        {/* Drinks */}
-        <section id="drinks" className="mb-12">
-          <SectionHeading eyebrow="🥛" title={t.drinks} sub={lang === 'th' ? 'เลือกภาชนะ · ความหวาน · ร้อนหรือเย็น' : 'Choose vessel · sweetness · hot or cold'} />
-          {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
-              {drinks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
+        {isFilteringActive ? (
+          <section id="search-results" className="mb-12">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <div className="text-xs font-bold uppercase tracking-widest text-terracotta">
+                  {lang === 'th' ? 'ผลการค้นหาเมนู' : 'Search Results'}
+                </div>
+                <h2 className="font-display italic font-bold text-2xl text-forest mt-0.5">
+                  {searchQuery ? `"${searchQuery}"` : selectedCategory.toUpperCase()}
+                </h2>
+              </div>
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-forest/10 text-forest border border-forest/20">
+                {lang === 'th' ? `พบ ${filteredProducts.length} รายการ` : `Found ${filteredProducts.length} items`}
+              </span>
             </div>
-          )}
-        </section>
 
-        {/* Snacks */}
-        <section id="snacks" className="mb-12">
-          <SectionHeading eyebrow="⚡" title={t.snacks} sub={lang === 'th' ? 'ทานคู่กับเครื่องดื่ม — ชิ้นละ ฿3' : 'Grab-and-go add-ons — ฿3 each'} />
-          {loading ? <SkeletonGrid /> : (
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
-              {snacks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
-            </div>
-          )}
-        </section>
+            {loading ? (
+              <SkeletonGrid />
+            ) : filteredProducts.length > 0 ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
+                {filteredProducts.map((p) => (
+                  <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-3xl liquid-glass border border-white/60 p-8 text-center">
+                <p className="text-forest font-semibold text-lg">
+                  {lang === 'th' ? 'ไม่พบเมนูที่ตรงกับการค้นหา' : 'No menu items found'}
+                </p>
+                <p className="text-xs text-ink-muted mt-1">
+                  {lang === 'th'
+                    ? 'ลองค้นหาคำอื่นๆ เช่น "น้ำเต้าหู้", "ปาท่องโก๋", "นมวัว", หรือ "น้ำขิง"'
+                    : 'Try searching for "Soy milk", "Patongko", "Cow milk", or "Ginger"'}
+                </p>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {['น้ำเต้าหู้', 'ปาท่องโก๋', 'นมวัวสด', 'น้ำขิง'].map((sample) => (
+                    <button
+                      key={sample}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('tap');
+                        setSearchQuery(sample);
+                      }}
+                      className="px-3 py-1.5 rounded-full text-xs font-medium bg-forest/10 text-forest hover:bg-forest/20 transition"
+                    >
+                      {sample}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('tap');
+                    setSearchQuery('');
+                    setSelectedCategory('all');
+                  }}
+                  className="mt-5 px-5 py-2 rounded-full bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition"
+                >
+                  {lang === 'th' ? 'แสดงเมนูทั้งหมด' : 'Show All Menu'}
+                </button>
+              </div>
+            )}
+          </section>
+        ) : (
+          <>
+            {/* Bestsellers */}
+            <section id="bestsellers" className="mb-12">
+              <SectionHeading eyebrow={t.bestsellers} title={lang === 'th' ? 'อันดับหนึ่งของร้าน' : 'Our bestsellers'} />
+              {loading ? <SkeletonGrid /> : (
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3.5 apple-duo-grid">
+                  {bestsellers.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
+                </div>
+              )}
+            </section>
+
+            {/* Drinks */}
+            <section id="drinks" className="mb-12">
+              <SectionHeading eyebrow="🥛" title={t.drinks} sub={lang === 'th' ? 'เลือกภาชนะ · ความหวาน · ร้อนหรือเย็น' : 'Choose vessel · sweetness · hot or cold'} />
+              {loading ? <SkeletonGrid /> : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
+                  {drinks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
+                </div>
+              )}
+            </section>
+
+            {/* Snacks */}
+            <section id="snacks" className="mb-12">
+              <SectionHeading eyebrow="⚡" title={t.snacks} sub={lang === 'th' ? 'ทานคู่กับเครื่องดื่ม — ชิ้นละ ฿3' : 'Grab-and-go add-ons — ฿3 each'} />
+              {loading ? <SkeletonGrid /> : (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 apple-duo-grid">
+                  {snacks.map((p) => <ProductCard key={p.id} product={p} onTap={() => setModal(p)} />)}
+                </div>
+              )}
+            </section>
+          </>
+        )}
 
         {/* About */}
         <section id="about" className="mb-12 grid md:grid-cols-2 gap-6 apple-duo-split">

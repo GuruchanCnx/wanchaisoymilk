@@ -423,6 +423,7 @@ function ProductEditor({
   onSaved: () => void;
 }) {
   const { t, lang } = useLang();
+  const { showToast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState<Partial<Product>>(() => product || {
     slug: '',
@@ -448,7 +449,11 @@ function ProductEditor({
   // Handle image upload from file or drop
   const handleFileChosen = async (file: File) => {
     if (!file.type.startsWith('image/')) {
-      alert(lang === 'th' ? 'กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, WEBP)' : 'Please choose an image file (PNG, JPG, WEBP).');
+      showToast(
+        lang === 'th' ? 'ไฟล์ไม่ถูกต้อง' : 'Invalid File',
+        lang === 'th' ? 'กรุณาเลือกไฟล์รูปภาพ (PNG, JPG, WEBP)' : 'Please choose an image file (PNG, JPG, WEBP).',
+        'error'
+      );
       return;
     }
     setUploading(true);
@@ -1309,7 +1314,11 @@ function SettingsTab() {
   const handleHeroFileUpload = async (file: File) => {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
-      alert(lang === 'th' ? 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WEBP)' : 'Please select an image file (JPG, PNG, WEBP)');
+      showToast(
+        lang === 'th' ? 'ไฟล์ไม่ถูกต้อง' : 'Invalid File',
+        lang === 'th' ? 'กรุณาเลือกไฟล์รูปภาพ (JPG, PNG, WEBP)' : 'Please select an image file (JPG, PNG, WEBP)',
+        'error'
+      );
       return;
     }
 
