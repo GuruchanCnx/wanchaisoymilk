@@ -38,12 +38,11 @@ import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import RichTextEditor from '../components/RichTextEditor';
 import LanguageToggle from '../components/LanguageToggle';
-import AccessibilityInspector from '../components/AccessibilityInspector';
 import HapticConfigPanel from '../components/HapticConfigPanel';
 import SalesAnalytics from '../components/SalesAnalytics';
 import { useAccessibility } from '../contexts/AccessibilityContext';
 
-type Tab = 'products' | 'orders' | 'analytics' | 'accessibility' | 'haptics' | 'settings' | 'database' | 'emails';
+type Tab = 'products' | 'orders' | 'analytics' | 'haptics' | 'settings' | 'database' | 'emails';
 
 export default function Admin() {
   const { t, lang } = useLang();
@@ -225,7 +224,6 @@ export default function Admin() {
                 ['products', t.products, Package],
                 ['orders', t.orders, ClipboardList],
                 ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
-                ['accessibility', lang === 'th' ? 'ตรวจสอบคอนทราสต์ (WCAG)' : 'Accessibility Inspector', Eye],
                 ['haptics', lang === 'th' ? 'การสั่นแป้น POS (Haptics)' : 'POS Haptics', Activity],
                 ['settings', lang === 'th' ? 'ตั้งค่าร้าน & ข้อมูล' : 'Shop Settings', Store],
                 ['database', lang === 'th' ? 'ฐานข้อมูล Firestore' : 'Firestore Database', Database],
@@ -252,7 +250,6 @@ export default function Admin() {
         {tab === 'products' && <ProductsTab />}
         {tab === 'orders' && <OrdersTab />}
         {tab === 'analytics' && <SalesAnalytics />}
-        {tab === 'accessibility' && <AccessibilityInspector />}
         {tab === 'haptics' && <HapticConfigPanel />}
         {tab === 'database' && <FirestoreDatabaseTab />}
         {tab === 'emails' && <EmailsTab />}

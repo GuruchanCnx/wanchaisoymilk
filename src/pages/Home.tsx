@@ -31,6 +31,7 @@ import RecentOrdersStrip from '../components/RecentOrdersStrip';
 import AccessibilitySettings from '../components/AccessibilitySettings';
 import DailySpecials from '../components/DailySpecials';
 import HomeOrderTracker from '../components/HomeOrderTracker';
+import CustomerReviews from '../components/CustomerReviews';
 import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { triggerHaptic } from '../lib/haptics';
@@ -155,92 +156,131 @@ export default function Home() {
         { id: 'bestsellers', label_th: 'ขายดี', label_en: 'Bestsellers' },
         { id: 'drinks', label_th: 'เครื่องดื่ม', label_en: 'Drinks' },
         { id: 'snacks', label_th: 'ของว่าง', label_en: 'Snacks' },
+        { id: 'reviews', label_th: 'รีวิว', label_en: 'Reviews' },
         { id: 'about', label_th: 'เรื่องราว', label_en: 'About' },
         { id: 'visit', label_th: 'มาหาเรา', label_en: 'Visit' },
       ]} />
 
-      {/* Hero Section with Editable Hero Wall Picture */}
-      <section className="relative overflow-hidden border-b border-forest/15">
-        <div className="absolute inset-0">
+      {/* Minimalist Hero Wall with Mobile-First One-Hand CTAs */}
+      <section className="relative overflow-hidden border-b border-forest/15 bg-gradient-to-b from-cream via-cream/80 to-cream">
+        <div className="absolute inset-0 pointer-events-none">
           <img
             src={heroWallPicture}
             alt="Wanchai Soy Hero Wall"
-            className="w-full h-full object-cover opacity-30"
+            className="w-full h-full object-cover opacity-25 filter blur-[0.5px]"
           />
-          <div className="absolute inset-0 bg-gradient-to-b from-cream/70 via-cream/40 to-cream" />
+          <div className="absolute inset-0 bg-gradient-to-b from-cream/85 via-cream/60 to-cream" />
         </div>
-        <div className="relative mx-auto max-w-6xl px-4 pt-8 pb-10 sm:pt-14 sm:pb-16">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <div className="inline-flex items-center gap-2 rounded-full liquid-pill px-3.5 py-1.5 text-xs font-semibold text-forest shadow-xs">
-              <span className={`h-2.5 w-2.5 rounded-full ${shopStatus === 'open' ? 'bg-forest pulse-dot' : 'bg-chili'}`} />
-              {shopStatus === 'open' ? t.open : shopStatus === 'closed' ? t.closed : t.onBreak}
-              <span className="opacity-60 font-mono">· {settings.hours_today || '06:00 – 11:00'}</span>
-            </div>
-            <h1 className="mt-4 font-display italic font-bold text-forest text-5xl sm:text-7xl leading-[0.9] tracking-tight">
-              {lang === 'th' ? 'น้ำเต้าหู้' : 'Fresh soy,'}
-              <br />
-              <span className="text-terracotta">{lang === 'th' ? 'ถุงเดียว' : 'in a bag.'}</span>
-            </h1>
-            <p className="mt-4 text-ink-muted max-w-xl text-base sm:text-lg">{t.tagline}</p>
 
-            <div className="mt-6 flex flex-wrap items-center gap-2.5">
+        <div className="relative mx-auto max-w-4xl px-4 pt-6 pb-8 sm:pt-12 sm:pb-14">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center sm:text-left"
+          >
+            {/* Status Pill */}
+            <div className="inline-flex items-center gap-2 rounded-full liquid-pill px-3.5 py-1 text-xs font-semibold text-forest shadow-2xs">
+              <span className={`h-2.5 w-2.5 rounded-full ${shopStatus === 'open' ? 'bg-forest pulse-dot' : 'bg-chili'}`} />
+              <span>{shopStatus === 'open' ? t.open : shopStatus === 'closed' ? t.closed : t.onBreak}</span>
+              <span className="opacity-60 font-mono text-[11px]">· {settings.hours_today || '06:00 – 11:00'}</span>
+            </div>
+
+            {/* Minimalist Hero Typography */}
+            <h1 className="mt-3.5 font-display italic font-bold text-forest text-4xl sm:text-6xl md:text-7xl leading-[0.95] tracking-tight">
+              {lang === 'th' ? 'น้ำเต้าหู้สด' : 'Fresh Soy Milk,'}
+              <br />
+              <span className="text-terracotta">{lang === 'th' ? 'ถุงเดียว เชียงใหม่' : 'in a bag · Chiang Mai'}</span>
+            </h1>
+
+            <p className="mt-2.5 text-ink-muted max-w-lg mx-auto sm:mx-0 text-sm sm:text-base leading-relaxed">
+              {t.tagline}
+            </p>
+
+            {/* Mobile One-Hand Ergonomic Command Deck */}
+            <div className="mt-6 max-w-lg mx-auto sm:mx-0">
+              {/* Primary One-Hand Thumb Button: Oversized & Direct */}
               <button
+                type="button"
                 onClick={() => {
                   triggerHaptic('tap');
                   document.getElementById('bestsellers')?.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="h-12 px-6 rounded-full bg-forest text-cream font-bold text-xs shadow-md hover:bg-forest-dark active:scale-95 transition flex items-center gap-2"
+                className="w-full h-14 rounded-2xl bg-forest hover:bg-forest-dark text-cream font-bold text-sm sm:text-base shadow-lg hover:shadow-xl active:scale-[0.98] transition-all flex items-center justify-between px-5 group"
+                aria-label="Order Now"
               >
-                {t.tapToOrder} <ChevronDown className="h-4 w-4" />
+                <div className="flex items-center gap-2.5">
+                  <span className="h-8 w-8 rounded-xl bg-forest-dark/70 flex items-center justify-center text-honey text-lg">
+                    🥛
+                  </span>
+                  <div className="text-left">
+                    <div className="font-bold leading-tight">{t.tapToOrder}</div>
+                    <div className="text-[10px] text-cream/75 font-normal">
+                      {lang === 'th' ? 'เลือกเมนูเครื่องดื่มและของว่าง' : 'Browse drinks & crispy snacks'}
+                    </div>
+                  </div>
+                </div>
+                <div className="h-8 w-8 rounded-xl bg-white/10 flex items-center justify-center text-honey group-hover:translate-y-0.5 transition">
+                  <ChevronDown className="h-4 w-4" />
+                </div>
               </button>
-              {/* Voice-to-Text Order Button using browser SpeechRecognition */}
-              <button
-                type="button"
-                onClick={() => {
-                  triggerHaptic('medium');
-                  setVoiceModalOpen(true);
-                }}
-                className="h-12 px-5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition group"
-              >
-                <Mic className="h-4 w-4 text-honey animate-pulse" />
-                <span>{t.voiceOrder}</span>
-              </button>
-              <button
-                onClick={() => {
-                  triggerHaptic('medium');
-                  setQrModalOpen(true);
-                }}
-                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs hover:bg-forest/10 transition"
-              >
-                <QrCode className="h-4 w-4 text-forest" />
-                <span>{t.tableQr}</span>
-              </button>
-              <a
-                href={directionsUrl}
-                target="_blank"
-                rel="noreferrer"
-                onClick={() => triggerHaptic('tap')}
-                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs"
-              >
-                <MapPin className="h-4 w-4 text-terracotta" /> {t.directions}
-              </a>
-              <Link
-                to="/checkout"
-                onClick={() => triggerHaptic('tap')}
-                className="h-12 px-5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-2 active:scale-95 shadow-xs hover:bg-forest/10 transition"
-              >
-                {t.walkupOrder}
-              </Link>
-            </div>
 
-            <div className="mt-6 inline-flex flex-wrap items-center gap-2 text-xs sm:text-sm liquid-pill rounded-full px-3.5 py-1.5 text-ink-muted">
-              <MapPin className="h-3.5 w-3.5 text-terracotta shrink-0" />
-              <span>{shopAddress}</span>
-              <span className="text-forest font-semibold">· {t.pickupOnly}</span>
+              {/* Secondary 2x2 One-Hand Thumb Action Grid */}
+              <div className="grid grid-cols-2 gap-2 mt-2.5">
+                {/* 1. Voice Order */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setVoiceModalOpen(true);
+                  }}
+                  className="h-12 px-3.5 rounded-2xl bg-terracotta text-cream font-bold text-xs flex items-center justify-center gap-2 active:scale-95 shadow-md hover:bg-terracotta-dark transition"
+                >
+                  <Mic className="h-4 w-4 text-honey animate-pulse" />
+                  <span>{t.voiceOrder}</span>
+                </button>
+
+                {/* 2. Table QR */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setQrModalOpen(true);
+                  }}
+                  className="h-12 px-3.5 rounded-2xl liquid-pill text-forest font-bold text-xs flex items-center justify-center gap-2 active:scale-95 shadow-2xs hover:bg-forest/10 transition border border-forest/15"
+                >
+                  <QrCode className="h-4 w-4 text-forest" />
+                  <span>{t.tableQr}</span>
+                </button>
+
+                {/* 3. Directions */}
+                <a
+                  href={directionsUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  onClick={() => triggerHaptic('tap')}
+                  className="h-12 px-3.5 rounded-2xl liquid-pill text-forest font-bold text-xs flex items-center justify-center gap-2 active:scale-95 shadow-2xs hover:bg-forest/10 transition border border-forest/15"
+                >
+                  <MapPin className="h-4 w-4 text-terracotta" />
+                  <span>{t.directions}</span>
+                </a>
+
+                {/* 4. Walk-up Order / Quick Cart */}
+                <Link
+                  to="/checkout"
+                  onClick={() => triggerHaptic('tap')}
+                  className="h-12 px-3.5 rounded-2xl liquid-pill text-forest font-bold text-xs flex items-center justify-center gap-2 active:scale-95 shadow-2xs hover:bg-forest/10 transition border border-forest/15"
+                >
+                  <span>{t.walkupOrder}</span>
+                </Link>
+              </div>
+
+              {/* Minimal Address & Pickup Badge */}
+              <div className="mt-3.5 inline-flex flex-wrap items-center justify-center sm:justify-start gap-1.5 text-xs liquid-pill rounded-full px-3.5 py-1 text-ink-muted">
+                <MapPin className="h-3.5 w-3.5 text-terracotta shrink-0" />
+                <span className="truncate max-w-[280px] sm:max-w-none">{shopAddress}</span>
+                <span className="text-forest font-semibold shrink-0">· {t.pickupOnly}</span>
+              </div>
             </div>
           </motion.div>
         </div>
@@ -461,6 +501,9 @@ export default function Home() {
             </section>
           </>
         )}
+
+        {/* Customer Ratings & Reviews Section (Firestore-backed) */}
+        <CustomerReviews />
 
         {/* About */}
         <section id="about" className="mb-12 grid md:grid-cols-2 gap-6 apple-duo-split">
