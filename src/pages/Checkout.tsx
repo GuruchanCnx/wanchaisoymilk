@@ -89,6 +89,8 @@ export default function Checkout() {
 
       // Track for recent orders on this device
       try {
+        localStorage.setItem('latest_order_id', String(order.id));
+        window.dispatchEvent(new Event('order_placed'));
         const list: number[] = JSON.parse(localStorage.getItem('my_order_ids') || '[]');
         localStorage.setItem('my_order_ids', JSON.stringify([order.id, ...list].slice(0, 20)));
         const saved = JSON.parse(localStorage.getItem('wanjai_orders') || '[]');

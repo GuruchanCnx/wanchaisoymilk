@@ -166,7 +166,11 @@ export default function OrderStatus() {
           orderRef,
           (docSnap) => {
             if (docSnap.exists()) {
-              const liveData = docSnap.data() as Order;
+              const rawData = docSnap.data();
+              const liveData = {
+                id: id ? (isNaN(Number(id)) ? id : Number(id)) : 0,
+                ...rawData,
+              } as Order;
               handleStatusChange(liveData);
               setOrder(liveData);
               setLoading(false);
@@ -605,6 +609,17 @@ export default function OrderStatus() {
 
                 return (
                   <div className="space-y-4">
+                    {/* Live Stream Header */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[11px] font-mono uppercase tracking-wider text-cream/90 font-bold">
+                          {lang === 'th' ? 'สถานะเรียลไทม์ · Firestore Live' : 'Real-Time Firestore Stream'}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-honey">{percent}%</span>
+                    </div>
+
                     {/* Continuous Progress Bar Line */}
                     <div className="relative">
                       {/* Background Bar */}
@@ -613,12 +628,6 @@ export default function OrderStatus() {
                           className="h-full rounded-full bg-gradient-to-r from-honey via-amber-400 to-emerald-400 transition-all duration-700 ease-out shadow-[0_0_12px_rgba(232,180,74,0.7)]"
                           style={{ width: `${percent}%` }}
                         />
-                      </div>
-
-                      {/* Percentage Tag */}
-                      <div className="mt-1.5 flex justify-between text-[11px] font-mono text-cream/70">
-                        <span>{lang === 'th' ? 'ความคืบหน้า' : 'Progress'}</span>
-                        <span className="font-bold text-honey">{percent}%</span>
                       </div>
                     </div>
 

@@ -29,6 +29,8 @@ import VoiceOrderModal from '../components/VoiceOrderModal';
 import MyUsualStrip from '../components/MyUsualStrip';
 import RecentOrdersStrip from '../components/RecentOrdersStrip';
 import AccessibilitySettings from '../components/AccessibilitySettings';
+import DailySpecials from '../components/DailySpecials';
+import HomeOrderTracker from '../components/HomeOrderTracker';
 import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { triggerHaptic } from '../lib/haptics';
@@ -149,6 +151,7 @@ export default function Home() {
     <div className="min-h-screen pb-24">
       <OnlineBadge />
       <Nav scrollTargets={[
+        { id: 'daily-specials', label_th: 'พิเศษวันนี้', label_en: 'Specials' },
         { id: 'bestsellers', label_th: 'ขายดี', label_en: 'Bestsellers' },
         { id: 'drinks', label_th: 'เครื่องดื่ม', label_en: 'Drinks' },
         { id: 'snacks', label_th: 'ของว่าง', label_en: 'Snacks' },
@@ -259,8 +262,16 @@ export default function Home() {
       </section>
 
       <main className="mx-auto max-w-6xl px-4 py-8 apple-duo-container">
+        {/* Real-Time Live Order Status Tracker (Powered by Firestore Listeners) */}
+        <HomeOrderTracker />
+
         <MyUsualStrip />
         <RecentOrdersStrip />
+
+        {/* Daily Specials Section (Rotating Seasonal Features from Firestore) */}
+        {!isFilteringActive && (
+          <DailySpecials onSelectProduct={(p) => setModal(p)} />
+        )}
 
         {/* Search Input Bar (Elder & Child Friendly, Instant Filter by Name or Category) */}
         <section id="menu-search" className="mb-8">
