@@ -28,6 +28,7 @@ import MenuQrModal from '../components/MenuQrModal';
 import VoiceOrderModal from '../components/VoiceOrderModal';
 import MyUsualStrip from '../components/MyUsualStrip';
 import RecentOrdersStrip from '../components/RecentOrdersStrip';
+import AccessibilitySettings from '../components/AccessibilitySettings';
 import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { triggerHaptic } from '../lib/haptics';
@@ -151,8 +152,7 @@ export default function Home() {
         { id: 'bestsellers', label_th: 'ขายดี', label_en: 'Bestsellers' },
         { id: 'drinks', label_th: 'เครื่องดื่ม', label_en: 'Drinks' },
         { id: 'snacks', label_th: 'ของว่าง', label_en: 'Snacks' },
-        { id: 'history', label_th: 'ประวัติสั่งซื้อ', label_en: 'History' },
-        { id: 'about', label_th: 'เกี่ยวกับเรา', label_en: 'About' },
+        { id: 'about', label_th: 'เรื่องราว', label_en: 'About' },
         { id: 'visit', label_th: 'มาหาเรา', label_en: 'Visit' },
       ]} />
 
@@ -629,7 +629,12 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="pt-6 pb-6 text-center text-xs text-ink-muted">
+        {/* Accessibility & Legibility Settings Panel */}
+        <section className="mt-12 mb-6 max-w-2xl mx-auto">
+          <AccessibilitySettings variant="card" />
+        </section>
+
+        <footer className="pt-4 pb-6 text-center text-xs text-ink-muted">
           © Wanchai Soy · {shopAddress} · {coordsText} ·
           <Link to="/admin" className="ml-2 underline hover:text-forest">{t.admin}</Link>
         </footer>

@@ -38,7 +38,11 @@ const googleProvider = new GoogleAuthProvider();
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-  db = getFirestore(app, firebaseConfig.firestoreDatabaseId || '(default)');
+  const clientDbId =
+    (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) ||
+    firebaseConfig.firestoreDatabaseId ||
+    'ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6';
+  db = getFirestore(app, clientDbId);
   auth = getAuth(app);
 } catch (e) {
   console.warn('[Firebase Client] Init error:', e);
@@ -349,12 +353,35 @@ export async function requestFCMToken(): Promise<{ token: string | null; error?:
   }
 }
 
+let sharedAudioCtx: AudioContext | null = null;
+
+export function initAudioContext() {
+  if (typeof window === 'undefined') return;
+  try {
+    if (!sharedAudioCtx) {
+      sharedAudioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    }
+    if (sharedAudioCtx.state === 'suspended') {
+      sharedAudioCtx.resume();
+    }
+  } catch {}
+}
+
+if (typeof window !== 'undefined') {
+  const warmAudio = () => {
+    initAudioContext();
+  };
+  window.addEventListener('click', warmAudio, { once: true, passive: true });
+  window.addEventListener('touchstart', warmAudio, { once: true, passive: true });
+}
+
 /**
  * Play gentle chime sound when order status is ready
  */
 export function playReadyChime() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    initAudioContext();
+    const ctx = sharedAudioCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
@@ -366,7 +393,7 @@ export function playReadyChime() {
     osc.frequency.setValueAtTime(783.99, now + 0.24);
     osc.frequency.setValueAtTime(1046.5, now + 0.36);
 
-    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.setValueAtTime(0.35, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
 
     osc.connect(gain);

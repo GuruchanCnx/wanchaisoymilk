@@ -33,6 +33,7 @@ import { useToast } from '../contexts/ToastContext';
 import { downloadOrderReceiptPdf, printOrderReceipt } from '../lib/pdf-receipt';
 import UserProfileModal from '../components/UserProfileModal';
 import OrderProgressNotification from '../components/OrderProgressNotification';
+import AccessibilitySettings from '../components/AccessibilitySettings';
 import {
   db,
   doc,
@@ -1026,6 +1027,11 @@ export default function OrderStatus() {
             <XCircle className="h-5 w-5" /> {t.cancelled}
           </div>
         )}
+
+        {/* Quick Accessibility Settings */}
+        <div className="mt-6">
+          <AccessibilitySettings variant="card" />
+        </div>
       </main>
 
       <UserProfileModal

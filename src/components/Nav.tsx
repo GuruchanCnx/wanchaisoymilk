@@ -35,6 +35,7 @@ import LanguageToggle from './LanguageToggle';
 import MenuQrModal from './MenuQrModal';
 import UserProfileModal from './UserProfileModal';
 import AccessibilitySettingsMenu from './AccessibilitySettingsMenu';
+import AccessibilitySettings from './AccessibilitySettings';
 
 export default function Nav({
   scrollTargets,
@@ -98,41 +99,40 @@ export default function Nav({
 
   return (
     <>
-      <header className="sticky top-0 z-30 liquid-glass border-b border-white/60 shadow-xs">
+      {/* Floating Modern Capsule Navbar (Image 43.21.png Inspired - Webapp Heritage Palette) */}
+      <header className="sticky top-2 sm:top-3.5 z-40 px-3 sm:px-4 max-w-5xl mx-auto w-full transition-all">
         <div
-          className={`mx-auto max-w-6xl px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-3 duo-nav-shell ${
+          className={`w-full rounded-full liquid-glass border border-white/80 shadow-md shadow-forest/5 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2 sm:gap-3 ${
             isDualScreen ? 'duo-nav-active' : ''
           }`}
         >
-          {/* Left Side: Brand Logo */}
-          <div className="duo-nav-left flex items-center gap-2 sm:gap-3 shrink-0">
-            <Link
-              to="/"
-              onClick={() => triggerHaptic('tap')}
-              className="flex items-center gap-2 sm:gap-2.5 shrink-0 group"
-            >
-              <div className="h-10 w-10 rounded-2xl bg-forest text-cream flex items-center justify-center shadow-md relative overflow-hidden group-hover:scale-105 transition">
-                <div className="absolute inset-1 rounded-xl bg-cream milk-bag opacity-95"></div>
-                <span className="relative font-display italic font-bold text-forest text-xl leading-none">
-                  w
-                </span>
+          {/* Left Side: Circular Brand Token & Title */}
+          <Link
+            to="/"
+            onClick={() => triggerHaptic('tap')}
+            className="flex items-center gap-2 sm:gap-2.5 pl-0.5 group shrink-0"
+            aria-label="Wanchai Soy Home"
+          >
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-forest text-cream flex items-center justify-center shadow-xs relative overflow-hidden group-hover:scale-105 transition">
+              <span className="font-display italic font-bold text-lg sm:text-xl leading-none">
+                w
+              </span>
+            </div>
+            <div className="leading-tight hidden xs:block">
+              <div className="font-display italic font-bold text-forest text-base sm:text-lg leading-none tracking-tight">
+                Wanchai
               </div>
-              <div className="leading-tight">
-                <div className="font-display italic font-bold text-forest text-lg sm:text-xl leading-none tracking-tight">
-                  Wanchai
-                </div>
-                <div className="text-[10px] font-thai text-ink-muted tracking-wide -mt-0.5">
-                  {lang === 'th' ? 'วันใจ Soy · ถนนวัวลาย' : 'Wanchai Soy · Walai'}
-                </div>
+              <div className="text-[10px] font-thai text-ink-muted tracking-wide -mt-0.5">
+                {lang === 'th' ? 'วันใจ Soy · วัวลาย' : 'Wanchai Soy'}
               </div>
-            </Link>
-          </div>
+            </div>
+          </Link>
 
-          {/* Desktop Center Navigation Links */}
+          {/* Center: Minimalist Text Navigation Links (Image 43.21.png style: Work, About, Playground...) */}
           {scrollTargets && (
             <nav
-              className={`hidden lg:flex items-center gap-1.5 flex-1 ${
-                isDualScreen ? 'justify-end pr-6' : 'justify-center'
+              className={`hidden md:flex items-center gap-4 lg:gap-6 flex-1 ${
+                isDualScreen ? 'justify-end pr-4' : 'justify-center'
               }`}
             >
               {scrollTargets.map((s) => (
@@ -142,7 +142,7 @@ export default function Nav({
                     triggerHaptic('tap');
                     jump(s.id);
                   }}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-semibold text-forest hover:bg-forest/10 liquid-pill transition"
+                  className="text-xs lg:text-[13px] font-semibold text-ink-muted hover:text-forest transition-colors py-1 px-2 rounded-full hover:bg-forest/5"
                 >
                   {lang === 'th' ? s.label_th : s.label_en}
                 </button>
@@ -150,9 +150,9 @@ export default function Nav({
             </nav>
           )}
 
-          {/* Right Side Navigation Controls (Minimalist, Elder & Child Friendly) */}
-          <div className="duo-nav-right flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
-            {/* Quick Large Font / Elder Mode Toggle (Visible on all devices for seniors & kids) */}
+          {/* Right Side: Capsule Action Pill + Utility Controls */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Large Font / Elder Mode Toggle */}
             <button
               type="button"
               onClick={() => {
@@ -168,9 +168,9 @@ export default function Nav({
                   ? 'ขยายขนาดตัวหนังสือ (สำหรับผู้สูงอายุและเด็ก)'
                   : 'Enlarge Text (For Seniors & Kids)'
               }
-              className={`h-10 px-2.5 sm:px-3 rounded-2xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95 shadow-2xs ${
+              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 shadow-2xs ${
                 isElderMode
-                  ? 'bg-amber-600 text-cream shadow-sm ring-2 ring-amber-400'
+                  ? 'bg-amber-600 text-cream shadow-xs ring-2 ring-amber-400'
                   : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
               }`}
               aria-label={lang === 'th' ? 'โหมดตัวหนังสือใหญ่' : 'Large Font'}
@@ -192,7 +192,7 @@ export default function Nav({
                   setShowQrModal(true);
                 }}
                 title={lang === 'th' ? 'สแกน QR สั่งที่โต๊ะ/หน้าร้าน' : 'Table / Menu QR Code'}
-                className="h-10 w-10 rounded-2xl bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center justify-center transition active:scale-95 shadow-2xs"
+                className="h-9 sm:h-10 w-9 sm:w-10 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center justify-center transition active:scale-95 shadow-2xs"
                 aria-label="Open Menu QR"
               >
                 <QrCode className="h-4 w-4" />
@@ -204,7 +204,7 @@ export default function Nav({
                   setShowProfileModal(true);
                 }}
                 title={lang === 'th' ? 'แต้มสะสมวันใจคลับ' : 'Loyalty Points Tracker'}
-                className="h-10 px-3 rounded-2xl bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center gap-1.5 text-xs font-bold transition active:scale-95 shadow-2xs"
+                className="h-9 sm:h-10 px-3 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center gap-1.5 text-xs font-bold transition active:scale-95 shadow-2xs"
               >
                 <Award className="h-4 w-4 text-honey" />
                 <span className="font-mono text-xs text-forest">{points}</span>
@@ -212,11 +212,11 @@ export default function Nav({
               </button>
             </div>
 
-            {/* Cart Button with CSS Shake Animation & Clear Label for Elders & Kids */}
+            {/* Signature Right Action Capsule Pill (Image 43.21.png Inspired) */}
             <Link
               to="/checkout"
               onClick={() => triggerHaptic('medium')}
-              className={`relative h-10 px-3 sm:px-3.5 rounded-2xl bg-forest text-cream flex items-center gap-1.5 shadow-md hover:bg-forest-dark active:scale-95 transition ${
+              className={`relative h-9 sm:h-10 px-3.5 sm:px-4 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition ${
                 isCartShaking ? 'animate-cart-shake ring-2 ring-terracotta' : ''
               }`}
               aria-label={t.cart}
@@ -239,7 +239,7 @@ export default function Nav({
               </motion.div>
 
               <span className="font-bold text-xs">
-                {count > 0 ? `฿${subtotal}` : (lang === 'th' ? 'ตะกร้า' : 'Cart')}
+                {count > 0 ? `฿${subtotal}` : (lang === 'th' ? 'สั่งซื้อ' : 'Order')}
               </span>
 
               {count > 0 && (
@@ -247,20 +247,20 @@ export default function Nav({
                   key={`badge-${count}`}
                   initial={{ scale: 0.6 }}
                   animate={{ scale: 1 }}
-                  className="h-5 min-w-5 px-1 rounded-full bg-terracotta text-cream text-[10px] font-bold flex items-center justify-center shadow-xs"
+                  className="h-4.5 min-w-4.5 px-1 rounded-full bg-terracotta text-cream text-[10px] font-bold flex items-center justify-center shadow-xs"
                 >
                   {count}
                 </motion.span>
               )}
             </Link>
 
-            {/* Ergonomic Hamburger Navbar Toggle Button with Plain-Text Label for Elders & Children */}
+            {/* Ergonomic Hamburger Navbar Toggle Button */}
             <button
               type="button"
               onClick={toggleMenu}
               aria-label={isMenuOpen ? t.closeMenu : t.openMenu}
               aria-expanded={isMenuOpen}
-              className={`relative h-10 px-3 rounded-2xl flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
+              className={`relative h-9 sm:h-10 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
                 isMenuOpen
                   ? 'bg-terracotta text-cream ring-2 ring-terracotta/40'
                   : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
@@ -284,55 +284,19 @@ export default function Nav({
                 />
               </div>
 
-              <span className="font-bold text-xs font-thai">
+              <span className="font-bold text-xs font-thai hidden sm:inline">
                 {isMenuOpen
                   ? (lang === 'th' ? 'ปิด' : 'Close')
                   : (lang === 'th' ? 'เมนู' : 'Menu')}
               </span>
 
-              {/* Status indicator dot if accessibility or points are active */}
+              {/* Status indicator dot */}
               {(isElderMode || isHighContrast || points > 0) && !isMenuOpen && (
                 <span className="h-2 w-2 rounded-full bg-honey ring-2 ring-white" />
               )}
             </button>
           </div>
         </div>
-
-        {/* Mobile Horizontal Category Quick Rail (kept on Home page) */}
-        {scrollTargets && (
-          <div className="lg:hidden border-t border-forest/10 no-scrollbar overflow-x-auto bg-cream/40">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 whitespace-nowrap">
-              {scrollTargets.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    triggerHaptic('tap');
-                    jump(s.id);
-                  }}
-                  className="px-3 py-1 rounded-full text-xs font-semibold text-forest liquid-pill"
-                >
-                  {lang === 'th' ? s.label_th : s.label_en}
-                </button>
-              ))}
-              <button
-                onClick={() => {
-                  triggerHaptic('tap');
-                  setShowQrModal(true);
-                }}
-                className="px-3 py-1 rounded-full text-xs text-forest liquid-pill font-semibold flex items-center gap-1"
-              >
-                <QrCode className="h-3 w-3" /> {lang === 'th' ? 'QR เมนู' : 'Menu QR'}
-              </button>
-              <Link
-                to="/history"
-                onClick={() => triggerHaptic('tap')}
-                className="px-3 py-1 rounded-full text-xs text-forest liquid-pill font-semibold flex items-center gap-1"
-              >
-                <History className="h-3 w-3" /> {lang === 'th' ? 'ประวัติ' : 'History'}
-              </Link>
-            </div>
-          </div>
-        )}
       </header>
 
       {/* ONE-HANDED HAMBURGER DRAWER (Bottom Sheet on Mobile, Slide Drawer on Desktop) */}
@@ -552,72 +516,10 @@ export default function Nav({
                   </div>
                 </div>
 
-                {/* 4. One-Hand Accessibility & Ergonomics Toggles */}
-                <div className="rounded-2xl bg-white/90 p-3.5 border border-forest/15 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-forest flex items-center gap-1.5">
-                      <Sliders className="h-3.5 w-3.5" />
-                      <span>{t.accessibility}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('tap');
-                        setIsMenuOpen(false);
-                        setShowAccessibilityMenu(true);
-                      }}
-                      className="text-[11px] text-terracotta font-bold underline"
-                    >
-                      {lang === 'th' ? 'ปรับแต่งเพิ่มเติม' : 'All Settings'}
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {/* Elder Mode Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        toggleElderMode();
-                      }}
-                      className={`h-11 px-3 rounded-xl border flex items-center justify-between text-xs font-bold transition active:scale-95 ${
-                        isElderMode
-                          ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
-                          : 'bg-white text-forest border-forest/20 hover:bg-forest/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Type className="h-3.5 w-3.5" />
-                        <span>{t.elderModeShort}</span>
-                      </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-black/10">
-                        {isElderMode ? 'ON' : 'OFF'}
-                      </span>
-                    </button>
-
-                    {/* High Contrast Mode Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('selection');
-                        toggleHighContrast();
-                      }}
-                      className={`h-11 px-3 rounded-xl border flex items-center justify-between text-xs font-bold transition active:scale-95 ${
-                        isHighContrast
-                          ? 'bg-black text-white border-white ring-1 ring-black shadow-sm'
-                          : 'bg-white text-forest border-forest/20 hover:bg-forest/5'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5">
-                        <Eye className="h-3.5 w-3.5" />
-                        <span>{t.highContrastShort}</span>
-                      </div>
-                      <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-full bg-black/10">
-                        {isHighContrast ? 'ON' : 'OFF'}
-                      </span>
-                    </button>
-                  </div>
-                </div>
+                {/* 4. One-Hand Accessibility & Ergonomics Settings */}
+                <AccessibilitySettings
+                  variant="card"
+                />
 
                 {/* 5. Language Switcher & Quick Call */}
                 <div className="grid grid-cols-2 gap-2">

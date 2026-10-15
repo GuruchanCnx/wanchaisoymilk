@@ -9,6 +9,7 @@ import { FoldableProvider } from './contexts/FoldableContext';
 import { useFoldableSpanning } from './hooks/useFoldableSpanning';
 import SessionExpiredModal from './components/SessionExpiredModal';
 import AuthDiagnosticPanel from './components/AuthDiagnosticPanel';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 function AppShell() {
   // Hook that detects if the foldable device is spanned across two screens
@@ -32,6 +33,9 @@ function AppShell() {
       {/* Global 401 Session Expired Modal & Auth Diagnostics */}
       <SessionExpiredModal />
       <AuthDiagnosticPanel />
+
+      {/* Custom PWA Install Prompt for Mobile-First Experience */}
+      <PWAInstallPrompt />
     </div>
   );
 }

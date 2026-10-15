@@ -26,9 +26,13 @@ try {
   if (fs.existsSync(configPath)) {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const app = !getApps().length ? initializeApp(config) : getApp();
-    db = getFirestore(app, config.firestoreDatabaseId || '(default)');
+    const targetDatabaseId =
+      process.env.FIREBASE_DATABASE_ID ||
+      config.firestoreDatabaseId ||
+      'ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6';
+    db = getFirestore(app, targetDatabaseId);
     firestoreInitialized = true;
-    console.log('[Firestore] Connected to Firebase project:', config.projectId, 'database:', config.firestoreDatabaseId || '(default)');
+    console.log('[Firestore] Connected to Firebase project:', config.projectId, 'database:', targetDatabaseId);
   }
 } catch (err) {
   console.warn('[Firestore] Initialization warning:', err.message);
