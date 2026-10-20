@@ -1,5 +1,5 @@
 import { useLang } from '../contexts/LanguageContext';
-import Nav, { DesktopSideActions } from '../components/Nav';
+import Nav from '../components/Nav';
 import OrderHistory from '../components/OrderHistory';
 import OnlineBadge from '../components/OnlineBadge';
 import AccessibilitySettings from '../components/AccessibilitySettings';
@@ -17,7 +17,6 @@ export default function OrderHistoryPage() {
           <AccessibilitySettings variant="card" />
         </div>
       </main>
-      <DesktopSideActions />
     </div>
   );
 }

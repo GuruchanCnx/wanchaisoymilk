@@ -19,7 +19,7 @@ import {
 import { Link } from 'react-router-dom';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
-import Nav, { DesktopSideActions } from '../components/Nav';
+import Nav from '../components/Nav';
 import OnlineBadge from '../components/OnlineBadge';
 import BackToTop from '../components/BackToTop';
 import ProductCard from '../components/ProductCard';
@@ -726,7 +726,6 @@ export default function Home() {
         products={products}
       />
       <BackToTop />
-      <DesktopSideActions />
     </div>
   );
 }

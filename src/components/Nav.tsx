@@ -154,8 +154,8 @@ export default function Nav({
           )}
 
           {/* Right Side: Capsule Action Pill + Utility Controls */}
-          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
-            {/* Quick Large Font / Elder Mode Toggle - Visible on sm screens and above to prevent mobile bleeding */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* Quick Large Font / Elder Mode Toggle - Visible only on large desktop screens to prevent top bar clipping */}
             <button
               type="button"
               onClick={() => {
@@ -171,26 +171,23 @@ export default function Nav({
                   ? 'ขยายขนาดตัวหนังสือ (สำหรับผู้สูงอายุและเด็ก)'
                   : 'Enlarge Text (For Seniors & Kids)'
               }
-              className={`hidden sm:flex h-9 sm:h-10 px-2.5 sm:px-3 rounded-full text-xs font-bold items-center gap-1.5 transition active:scale-95 shadow-2xs ${
+              className={`hidden lg:flex h-9 sm:h-10 px-2.5 rounded-full text-xs font-bold items-center gap-1 transition active:scale-95 shadow-2xs ${
                 isElderMode
                   ? 'bg-amber-600 text-cream shadow-xs ring-2 ring-amber-400'
                   : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
               }`}
               aria-label={lang === 'th' ? 'โหมดตัวหนังสือใหญ่' : 'Large Font'}
             >
-              <span className="font-display font-bold text-sm sm:text-base leading-none">A+</span>
-              <span className="hidden md:inline font-thai text-[11px]">
-                {isElderMode ? (lang === 'th' ? 'ตัวใหญ่' : 'Large') : (lang === 'th' ? 'ขยายอักษร' : 'Font+')}
-              </span>
+              <span className="font-display font-bold text-sm leading-none">A+</span>
             </button>
 
-            {/* Language Switcher - Visible on sm screens and above */}
-            <div className="hidden sm:block">
-              <LanguageToggle compact />
+            {/* Language Switcher - Visible only on large desktop screens to prevent top bar clipping */}
+            <div className="hidden lg:block">
+              <LanguageToggle compact instanceId="nav-top-bar" />
             </div>
 
             {/* Desktop Only Extra Badges: QR & Points */}
-            <div className="hidden lg:flex items-center gap-1.5">
+            <div className="hidden xl:flex items-center gap-1.5">
               <button
                 onClick={() => {
                   triggerHaptic('tap');
@@ -217,11 +214,11 @@ export default function Nav({
               </button>
             </div>
 
-            {/* Signature Right Action Capsule Pill (Image 43.21.png Inspired) */}
+            {/* Signature Right Action Capsule Pill (Cart & Checkout) */}
             <Link
               to="/checkout"
               onClick={() => triggerHaptic('medium')}
-              className={`relative h-9 sm:h-10 px-3.5 sm:px-4 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition ${
+              className={`relative h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition shrink-0 ${
                 isCartShaking ? 'animate-cart-shake ring-2 ring-terracotta' : ''
               }`}
               aria-label={t.cart}
@@ -243,7 +240,7 @@ export default function Nav({
                 <ShoppingBag className="h-4 w-4" />
               </motion.div>
 
-              <span className="font-bold text-xs">
+              <span className="font-bold text-xs whitespace-nowrap">
                 {count > 0 ? `฿${subtotal}` : (lang === 'th' ? 'สั่งซื้อ' : 'Order')}
               </span>
 
@@ -265,7 +262,7 @@ export default function Nav({
               onClick={toggleMenu}
               aria-label={isMenuOpen ? t.closeMenu : t.openMenu}
               aria-expanded={isMenuOpen}
-              className={`relative h-9 sm:h-10 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition active:scale-95 shadow-xs ${
+              className={`relative h-9 sm:h-10 px-2.5 sm:px-3 rounded-full flex items-center gap-1.5 transition active:scale-95 shadow-xs shrink-0 ${
                 isMenuOpen
                   ? 'bg-terracotta text-cream ring-2 ring-terracotta/40'
                   : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
@@ -712,28 +709,7 @@ export default function Nav({
 }
 
 export function DesktopSideActions() {
-  const { t } = useLang();
-  // Coordinates 18°46'47.4"N 98°59'04.1"E
-  const directionsUrl = 'https://www.google.com/maps/dir/?api=1&destination=18.779833,98.984472';
-
-  return (
-    <div className="hidden md:flex fixed bottom-6 left-6 z-30 flex-col gap-2.5">
-      <a
-        href={directionsUrl}
-        target="_blank"
-        rel="noreferrer"
-        className="h-11 px-4.5 rounded-full bg-terracotta text-cream shadow-lg flex items-center gap-2 font-semibold text-xs hover:bg-terracotta-dark active:scale-95 transition"
-      >
-        <MapPin className="h-4 w-4" /> {t.directions}
-      </a>
-      <Link
-        to="/pos"
-        className="h-11 px-4.5 rounded-full bg-forest text-cream shadow-lg flex items-center gap-2 font-semibold text-xs hover:bg-forest-dark active:scale-95 transition"
-      >
-        <ClipboardList className="h-4 w-4" /> {t.posMode}
-      </Link>
-    </div>
-  );
+  return null;
 }
 
 export function CallShopBtn({ phone }: { phone?: string }) {

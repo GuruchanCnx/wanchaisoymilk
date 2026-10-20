@@ -27,7 +27,6 @@ try {
     const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
     const app = !getApps().length ? initializeApp(config) : getApp();
     const targetDatabaseId =
-      process.env.FIREBASE_DATABASE_ID ||
       config.firestoreDatabaseId ||
       'ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6';
     db = getFirestore(app, targetDatabaseId);

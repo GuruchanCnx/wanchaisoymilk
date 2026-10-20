@@ -92,7 +92,7 @@ export default function OrderStatus() {
   const { id } = useParams();
   const { t, lang } = useLang();
   const { add } = useCart();
-  const { showToast } = useToast();
+  const { showToast, showOrderStatusToast } = useToast();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [fcmEnabled, setFcmEnabled] = useState(false);
@@ -138,11 +138,14 @@ export default function OrderStatus() {
           tag: `order-${newOrder.id}-prep`,
         }
       );
-      showToast(
-        lang === 'th' ? 'กำลังต้มสดใหม่ 🔥' : 'Now Preparing 🔥',
-        lang === 'th' ? 'หม้อต้มกำลังทำงานตามสูตรที่คุณเลือก' : 'Simmering your custom recipe now',
-        'info'
-      );
+      showOrderStatusToast({
+        orderId: newOrder.id,
+        status: 'preparing',
+        previousStatus: prev,
+        customerName: newOrder.customer_name,
+        total: newOrder.total,
+        itemCount: newOrder.items?.length || 1,
+      });
       if ('vibrate' in navigator) navigator.vibrate?.([150, 80, 150]);
     } else if (prev && prev !== 'ready' && newOrder.status === 'ready') {
       // Trigger chime and notification
@@ -152,11 +155,14 @@ export default function OrderStatus() {
         tag: `order-${newOrder.id}`,
       });
       setStatusAlertShown(true);
-      showToast(
-        lang === 'th' ? 'พร้อมรับแล้วตอนนี้! ✨' : 'Ready for Pickup! ✨',
-        lang === 'th' ? 'แวะรับได้ที่ร้านวันใจ Soy ถนนวัวลาย' : 'Waiting for you at WanJai cart',
-        'success'
-      );
+      showOrderStatusToast({
+        orderId: newOrder.id,
+        status: 'ready',
+        previousStatus: prev,
+        customerName: newOrder.customer_name,
+        total: newOrder.total,
+        itemCount: newOrder.items?.length || 1,
+      });
       if ('vibrate' in navigator) navigator.vibrate?.([200, 100, 200, 100, 400]);
     }
     prevStatusRef.current = newOrder.status;

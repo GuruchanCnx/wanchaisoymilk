@@ -38,8 +38,8 @@ const googleProvider = new GoogleAuthProvider();
 
 try {
   app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+  // Use user's provisioned Firestore database ID directly
   const clientDbId =
-    (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) ||
     firebaseConfig.firestoreDatabaseId ||
     'ai-studio-wanchaisoymilk-2125599d-2848-42d7-b69f-4b82b3e45dc6';
   db = getFirestore(app, clientDbId);

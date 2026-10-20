@@ -29,6 +29,8 @@ import {
   Activity,
   TrendingUp,
   BarChart3,
+  LogOut,
+  Boxes,
 } from 'lucide-react';
 import type { Product, Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -40,9 +42,10 @@ import RichTextEditor from '../components/RichTextEditor';
 import LanguageToggle from '../components/LanguageToggle';
 import HapticConfigPanel from '../components/HapticConfigPanel';
 import SalesAnalytics from '../components/SalesAnalytics';
+import InventoryManager from '../components/InventoryManager';
 import { useAccessibility } from '../contexts/AccessibilityContext';
 
-type Tab = 'products' | 'orders' | 'analytics' | 'haptics' | 'settings' | 'database' | 'emails';
+type Tab = 'products' | 'inventory' | 'orders' | 'analytics' | 'haptics' | 'settings' | 'database' | 'emails';
 
 export default function Admin() {
   const { t, lang } = useLang();
@@ -155,23 +158,30 @@ export default function Admin() {
     <div className="min-h-screen pb-20 bg-cream">
       {/* iOS 27 Liquid Glass Nav */}
       <header className="sticky top-0 z-30 liquid-glass border-b border-white/50">
-        <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
+        <div className="mx-auto max-w-6xl px-2.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between gap-1.5 sm:gap-2 overflow-hidden box-border">
+          {/* Left: Return + Branding + User Email */}
+          <div className="flex items-center gap-1.5 sm:gap-3 min-w-0 shrink">
             <Link
               to="/"
-              className="h-10 w-10 rounded-2xl liquid-pill flex items-center justify-center text-forest hover:bg-forest/10 transition active:scale-95"
+              className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-2xl liquid-pill flex items-center justify-center text-forest hover:bg-forest/10 transition active:scale-95 shrink-0"
+              title={t.home}
+              aria-label={t.home}
             >
               <ArrowLeft className="h-4 w-4" />
             </Link>
-            <div>
-              <div className="font-display italic font-bold text-forest text-xl leading-none">
+            <div className="min-w-0">
+              <div className="font-display italic font-bold text-forest text-base sm:text-xl leading-none truncate">
                 {t.admin}
               </div>
-              <div className="text-xs text-ink-muted font-mono mt-0.5">{user.email}</div>
+              <div className="text-[10px] sm:text-xs text-ink-muted font-mono mt-0.5 truncate max-w-[85px] xs:max-w-[130px] sm:max-w-xs">
+                {user.email}
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {/* Quick-Access High-Contrast Toggle for Color-Impaired / Low-Vision Users */}
+
+          {/* Right: Actions, Language Toggle, POS, Sign Out (Responsive & Non-bleeding) */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Quick-Access High-Contrast Toggle */}
             <button
               onClick={() => {
                 triggerHaptic('tap');
@@ -180,38 +190,55 @@ export default function Admin() {
               title={
                 isHighContrast
                   ? lang === 'th'
-                    ? 'โหมดคอนทราสต์สูงเปิดอยู่ (คลิกเพื่อกลับสู่ขนาดปกติ)'
-                    : 'High Contrast Mode Active (Click to disable)'
+                    ? 'โหมดคอนทราสต์สูงเปิดอยู่ (แตะเพื่อปิด)'
+                    : 'High Contrast Mode Active (Tap to disable)'
                   : lang === 'th'
-                  ? 'เปิดโหมดคอนทราสต์สูงสำหรับผู้มีปัญหาการมองเห็นสี'
-                  : 'Enable High Contrast Mode for color-impaired users'
+                  ? 'เปิดโหมดคอนทราสต์สูงสำหรับผู้มีปัญหาการมองเห็น'
+                  : 'Enable High Contrast Mode'
               }
-              className={`h-9 px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 ${
+              className={`h-8 sm:h-9 px-2 sm:px-3 rounded-full text-xs font-bold flex items-center justify-center gap-1 transition active:scale-95 ${
                 isHighContrast
-                  ? 'bg-black text-white ring-2 ring-amber-400 shadow-md scale-105'
+                  ? 'bg-black text-white ring-2 ring-amber-400 shadow-md'
                   : 'liquid-pill text-forest hover:bg-forest/10 border border-forest/15'
               }`}
               aria-label="Toggle High Contrast"
             >
               <Eye className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{lang === 'th' ? 'คอนทราสต์สูง' : 'Contrast'}</span>
-              <span className={`text-[10px] font-mono px-1 rounded ${isHighContrast ? 'bg-amber-400 text-black font-extrabold' : 'bg-forest/10 text-forest'}`}>
+              <span className="hidden md:inline">{lang === 'th' ? 'คอนทราสต์' : 'Contrast'}</span>
+              <span
+                className={`text-[9px] sm:text-[10px] font-mono px-1 rounded ${
+                  isHighContrast
+                    ? 'bg-amber-400 text-black font-extrabold'
+                    : 'bg-forest/10 text-forest hidden xs:inline'
+                }`}
+              >
                 {isHighContrast ? 'ON' : 'OFF'}
               </span>
             </button>
 
-            <LanguageToggle compact />
+            {/* Language Switcher */}
+            <LanguageToggle compact instanceId="admin-top-bar" />
+
+            {/* POS Screen Link */}
             <Link
               to="/pos"
-              className="h-9 px-3.5 rounded-full bg-terracotta text-cream text-xs font-bold flex items-center gap-1.5 shadow hover:bg-terracotta-dark active:scale-95 transition"
+              className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-full bg-terracotta text-cream text-xs font-bold flex items-center justify-center gap-1 shadow hover:bg-terracotta-dark active:scale-95 transition shrink-0"
+              title="Point of Sale"
+              aria-label="Point of Sale"
             >
-              <Store className="h-3.5 w-3.5" /> POS
+              <Store className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">POS</span>
             </Link>
+
+            {/* Sign Out Button (Icon on mobile, text on tablet/desktop) */}
             <button
               onClick={signOut}
-              className="h-9 px-3.5 rounded-full liquid-pill text-xs font-semibold text-ink-muted hover:text-ink transition"
+              className="h-8 sm:h-9 px-2.5 sm:px-3.5 rounded-full liquid-pill text-xs font-semibold text-ink-muted hover:text-ink hover:bg-forest/10 transition active:scale-95 flex items-center justify-center gap-1 shrink-0"
+              title={t.signOut}
+              aria-label={t.signOut}
             >
-              {t.signOut}
+              <LogOut className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t.signOut}</span>
             </button>
           </div>
         </div>
@@ -222,6 +249,7 @@ export default function Admin() {
             {(
               [
                 ['products', t.products, Package],
+                ['inventory', lang === 'th' ? 'คลังสต็อก (Inventory)' : 'Inventory', Boxes],
                 ['orders', t.orders, ClipboardList],
                 ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
                 ['haptics', lang === 'th' ? 'การสั่นแป้น POS (Haptics)' : 'POS Haptics', Activity],
@@ -247,7 +275,46 @@ export default function Admin() {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6">
+        {/* Admin Quick Launch Bar: Convenient access to POS Terminal, Store Directions, and Front Store */}
+        <div className="mb-6 p-3 sm:p-4 rounded-3xl liquid-glass border border-white/80 shadow-xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold text-forest uppercase tracking-wider font-mono">
+              {lang === 'th' ? '⚡ ปุ่มลัดผู้ดูแลระบบ:' : '⚡ Admin Quick Launch:'}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              to="/pos"
+              className="h-9 px-3.5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-1.5 shadow hover:bg-forest-dark transition active:scale-95"
+            >
+              <Store className="h-4 w-4 text-honey" />
+              <span>{lang === 'th' ? 'เปิดเครื่องคิดเงิน POS หน้าร้าน' : 'Launch POS Terminal'}</span>
+            </Link>
+
+            <a
+              href="https://www.google.com/maps/dir/?api=1&destination=18.779833,98.984472"
+              target="_blank"
+              rel="noreferrer"
+              className="h-9 px-3.5 rounded-full bg-terracotta text-cream font-bold text-xs flex items-center gap-1.5 shadow hover:bg-terracotta-dark transition active:scale-95"
+            >
+              <MapPin className="h-4 w-4" />
+              <span>{lang === 'th' ? 'แผนที่ร้านวันใจ (ถ.วัวลาย)' : 'Store Directions (Walai)'}</span>
+              <ExternalLink className="h-3 w-3 opacity-70" />
+            </a>
+
+            <Link
+              to="/"
+              className="h-9 px-3.5 rounded-full liquid-pill text-forest font-bold text-xs flex items-center gap-1.5 hover:bg-forest/10 transition active:scale-95"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>{lang === 'th' ? 'ดูหน้าร้านลูกค้า' : 'View Storefront'}</span>
+            </Link>
+          </div>
+        </div>
+
         {tab === 'products' && <ProductsTab />}
+        {tab === 'inventory' && <InventoryManager />}
         {tab === 'orders' && <OrdersTab />}
         {tab === 'analytics' && <SalesAnalytics />}
         {tab === 'haptics' && <HapticConfigPanel />}

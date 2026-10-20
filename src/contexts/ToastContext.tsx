@@ -1,10 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Info, Sparkles, X, WifiOff, Wifi, ChevronUp, ChevronDown } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Sparkles, X, WifiOff, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../lib/haptics';
 import { useLang } from './LanguageContext';
+import OrderStatusToast, { OrderStatusToastData } from '../components/OrderStatusToast';
 
-export type ToastType = 'success' | 'info' | 'error';
+export type ToastType = 'success' | 'info' | 'error' | 'order-status';
+
+export interface ToastAction {
+  label: string;
+  onClick: () => void;
+}
 
 export interface ToastItem {
   id: string;
@@ -12,16 +18,20 @@ export interface ToastItem {
   title: string;
   description?: string;
   icon?: string;
+  action?: ToastAction;
+  orderData?: OrderStatusToastData;
 }
 
 interface ToastContextValue {
-  showToast: (title: string, description?: string, type?: ToastType) => void;
+  showToast: (title: string, description?: string, type?: ToastType, action?: ToastAction) => void;
+  showOrderStatusToast: (orderData: OrderStatusToastData, action?: ToastAction) => void;
   removeToast: (id: string) => void;
   isOnline: boolean;
 }
 
 const ToastContext = createContext<ToastContextValue>({
   showToast: () => {},
+  showOrderStatusToast: () => {},
   removeToast: () => {},
   isOnline: true,
 });
@@ -40,25 +50,59 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  const showToast = useCallback((title: string, description?: string, type: ToastType = 'success') => {
-    const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-    
-    // Tactile haptic pulse
-    if (type === 'success') {
-      triggerHaptic('success');
-    } else if (type === 'error') {
-      triggerHaptic('error');
-    } else {
-      triggerHaptic('light');
-    }
+  const showToast = useCallback(
+    (title: string, description?: string, type: ToastType = 'success', action?: ToastAction) => {
+      const id = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 
-    setToasts((prev) => [...prev.slice(-3), { id, title, description, type }]);
+      // Tactile haptic pulse
+      if (type === 'success') {
+        triggerHaptic('success');
+      } else if (type === 'error') {
+        triggerHaptic('error');
+      } else {
+        triggerHaptic('light');
+      }
 
-    // Auto dismiss after 3.2s
-    setTimeout(() => {
-      removeToast(id);
-    }, 3200);
-  }, [removeToast]);
+      setToasts((prev) => [...prev.slice(-3), { id, title, description, type, action }]);
+
+      // Auto dismiss after 5s for action toasts, 3.2s for standard
+      const timeout = action ? 5000 : 3200;
+      setTimeout(() => {
+        removeToast(id);
+      }, timeout);
+    },
+    [removeToast]
+  );
+
+  const showOrderStatusToast = useCallback(
+    (orderData: OrderStatusToastData, action?: ToastAction) => {
+      const id = `toast-order-${orderData.orderId}-${Date.now()}`;
+
+      if (orderData.status === 'ready') {
+        triggerHaptic('heavy');
+      } else {
+        triggerHaptic('medium');
+      }
+
+      // Keep only one toast per orderId and max 3 toasts total
+      setToasts((prev) => [
+        ...prev.filter((t) => t.orderData?.orderId !== orderData.orderId).slice(-2),
+        {
+          id,
+          type: 'order-status',
+          title: orderData.status === 'ready' ? 'Ready for Pickup' : 'Now Preparing',
+          orderData,
+          action,
+        },
+      ]);
+
+      // Allow 8 seconds for order status toasts so user has comfortable thumb time to tap
+      setTimeout(() => {
+        removeToast(id);
+      }, 8000);
+    },
+    [removeToast]
+  );
 
   // Monitor navigator.onLine status changes for automatic offline banner & PWA feedback
   useEffect(() => {
@@ -91,7 +135,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [lang, showToast]);
 
   return (
-    <ToastContext.Provider value={{ showToast, removeToast, isOnline }}>
+    <ToastContext.Provider value={{ showToast, showOrderStatusToast, removeToast, isOnline }}>
       {children}
 
       {/* Automatic PWA Offline Status Banner */}
@@ -181,47 +225,74 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -15, scale: 0.92 }}
               transition={{ type: 'spring', damping: 22, stiffness: 350 }}
-              className={`pointer-events-auto rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl border flex items-center gap-3 ${
-                toast.type === 'success'
-                  ? 'bg-forest/95 text-cream border-emerald-500/40'
-                  : toast.type === 'error'
-                  ? 'bg-chili/95 text-cream border-red-500/40'
-                  : 'bg-cream/95 text-forest border-forest/20'
-              }`}
+              className="pointer-events-auto w-full"
             >
-              <div className="shrink-0">
-                {toast.type === 'success' ? (
-                  <div className="h-8 w-8 rounded-full bg-emerald-500/25 flex items-center justify-center text-honey">
-                    <CheckCircle2 className="h-5 w-5" />
+              {toast.type === 'order-status' && toast.orderData ? (
+                <OrderStatusToast
+                  orderData={toast.orderData}
+                  onDismiss={() => removeToast(toast.id)}
+                  onAction={toast.action?.onClick}
+                />
+              ) : (
+                <div
+                  className={`rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl border flex items-center gap-3 ${
+                    toast.type === 'success'
+                      ? 'bg-forest/95 text-cream border-emerald-500/40'
+                      : toast.type === 'error'
+                      ? 'bg-chili/95 text-cream border-red-500/40'
+                      : 'bg-cream/95 text-forest border-forest/20'
+                  }`}
+                >
+                  <div className="shrink-0">
+                    {toast.type === 'success' ? (
+                      <div className="h-8 w-8 rounded-full bg-emerald-500/25 flex items-center justify-center text-honey">
+                        <CheckCircle2 className="h-5 w-5" />
+                      </div>
+                    ) : toast.type === 'error' ? (
+                      <div className="h-8 w-8 rounded-full bg-red-500/25 flex items-center justify-center text-white">
+                        <AlertCircle className="h-5 w-5" />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-forest/15 flex items-center justify-center text-forest">
+                        <Sparkles className="h-5 w-5" />
+                      </div>
+                    )}
                   </div>
-                ) : toast.type === 'error' ? (
-                  <div className="h-8 w-8 rounded-full bg-red-500/25 flex items-center justify-center text-white">
-                    <AlertCircle className="h-5 w-5" />
-                  </div>
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-forest/15 flex items-center justify-center text-forest">
-                    <Sparkles className="h-5 w-5" />
-                  </div>
-                )}
-              </div>
 
-              <div className="flex-1 min-w-0 pr-1">
-                <div className="font-thai font-bold text-sm leading-tight truncate">
-                  {toast.title}
+                  <div className="flex-1 min-w-0 pr-1">
+                    <div className="font-thai font-bold text-sm leading-tight truncate">
+                      {toast.title}
+                    </div>
+                    {toast.description && (
+                      <div className="text-xs opacity-85 mt-0.5 leading-snug line-clamp-2">
+                        {toast.description}
+                      </div>
+                    )}
+                  </div>
+
+                  {toast.action && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('tap');
+                        toast.action?.onClick();
+                        removeToast(toast.id);
+                      }}
+                      className="shrink-0 px-3 py-1 rounded-xl bg-white/20 hover:bg-white/35 text-xs font-bold font-thai border border-white/25 active:scale-95 transition shadow-2xs"
+                    >
+                      {toast.action.label}
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => removeToast(toast.id)}
+                    className="shrink-0 p-1 rounded-full opacity-60 hover:opacity-100 hover:bg-black/10 transition"
+                    aria-label="Dismiss"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-                {toast.description && (
-                  <div className="text-xs opacity-85 mt-0.5 leading-snug line-clamp-2">
-                    {toast.description}
-                  </div>
-                )}
-              </div>
-
-              <button
-                onClick={() => removeToast(toast.id)}
-                className="shrink-0 p-1 rounded-full opacity-60 hover:opacity-100 hover:bg-black/10 transition"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>

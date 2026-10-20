@@ -9,8 +9,8 @@ import { FoldableProvider } from './contexts/FoldableContext';
 import { useFoldableSpanning } from './hooks/useFoldableSpanning';
 import SessionExpiredModal from './components/SessionExpiredModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
-import QuickSettingsFloatingMenu from './components/QuickSettingsFloatingMenu';
 import RealtimeOrderStatusNotifier from './components/RealtimeOrderStatusNotifier';
+import BackToTopButton from './components/BackToTopButton';
 
 function AppShell() {
   // Hook that detects if the foldable device is spanned across two screens
@@ -37,8 +37,8 @@ function AppShell() {
       {/* Global 401 Session Expired Modal */}
       <SessionExpiredModal />
 
-      {/* Quick Settings Floating Action Menu (Elder Mode & High Contrast) */}
-      <QuickSettingsFloatingMenu />
+      {/* Smooth Back To Top Floating Action Button */}
+      <BackToTopButton />
 
       {/* Custom PWA Install Prompt for Mobile-First Experience */}
       <PWAInstallPrompt />
