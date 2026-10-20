@@ -12,17 +12,20 @@ import {
   Search,
   Sparkles,
   Zap,
+  ClipboardPaste,
 } from 'lucide-react';
 import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import { baht } from '../lib/format';
+import BatchInventoryUpdateModal from './BatchInventoryUpdateModal';
 
 export default function InventoryManager() {
   const { lang } = useLang();
   const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -280,6 +283,18 @@ export default function InventoryManager() {
 
           <button
             type="button"
+            onClick={() => {
+              triggerHaptic('medium');
+              setIsBatchModalOpen(true);
+            }}
+            className="h-9 px-3.5 rounded-full bg-forest-dark border border-honey/50 hover:border-honey text-cream font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+          >
+            <ClipboardPaste className="h-3.5 w-3.5 text-honey" />
+            <span>{lang === 'th' ? 'วางข้อมูลสต็อกเป็นชุด (Batch Paste)' : 'Batch Paste Import'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={loadProducts}
             title={lang === 'th' ? 'รีเฟรชสต็อก' : 'Refresh'}
             className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-cream flex items-center justify-center transition active:scale-95"
@@ -499,6 +514,14 @@ export default function InventoryManager() {
           )}
         </div>
       </div>
+
+      {/* Batch Inventory Paste & Import Modal */}
+      <BatchInventoryUpdateModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        products={products}
+        onBatchUpdated={loadProducts}
+      />
     </div>
   );
 }

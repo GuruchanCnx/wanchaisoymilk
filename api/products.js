@@ -23,6 +23,17 @@ export default async function handler(req, res) {
       return res.status(201).json(product);
     }
     if (req.method === 'PUT') {
+      if (Array.isArray(req.body?.batch)) {
+        const results = [];
+        for (const item of req.body.batch) {
+          if (item && item.id) {
+            const { id, ...updates } = item;
+            const updated = await updateFirestoreProduct(id, updates);
+            results.push(updated);
+          }
+        }
+        return res.status(200).json({ ok: true, count: results.length, items: results });
+      }
       const { id, ...updates } = req.body || {};
       if (!id) return res.status(400).json({ error: 'id required' });
       const updated = await updateFirestoreProduct(id, updates);
