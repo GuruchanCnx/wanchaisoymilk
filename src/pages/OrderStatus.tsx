@@ -40,6 +40,7 @@ import {
   onSnapshot,
   requestFCMToken,
   playReadyChime,
+  playPreparingChime,
   showPushNotification,
 } from '../lib/firebase';
 
@@ -125,7 +126,25 @@ export default function OrderStatus() {
   // Sound and push notification trigger
   const handleStatusChange = (newOrder: Order) => {
     const prev = prevStatusRef.current;
-    if (prev && prev !== 'ready' && newOrder.status === 'ready') {
+    if (prev && prev !== 'preparing' && newOrder.status === 'preparing') {
+      playPreparingChime();
+      showPushNotification(
+        lang === 'th' ? 'หม้อต้มกำลังทำงาน! เริ่มต้มสดแล้ว 🔥' : 'Now Preparing! Simmering fresh soy milk 🔥',
+        {
+          body:
+            lang === 'th'
+              ? `ออเดอร์ #${newOrder.id} เข้าระบบต้มสดตามสูตรดั้งเดิมแล้ว`
+              : `Order #${newOrder.id} is now simmering on the stove`,
+          tag: `order-${newOrder.id}-prep`,
+        }
+      );
+      showToast(
+        lang === 'th' ? 'กำลังต้มสดใหม่ 🔥' : 'Now Preparing 🔥',
+        lang === 'th' ? 'หม้อต้มกำลังทำงานตามสูตรที่คุณเลือก' : 'Simmering your custom recipe now',
+        'info'
+      );
+      if ('vibrate' in navigator) navigator.vibrate?.([150, 80, 150]);
+    } else if (prev && prev !== 'ready' && newOrder.status === 'ready') {
       // Trigger chime and notification
       playReadyChime();
       showPushNotification('น้ำเต้าหู้ของคุณพร้อมรับแล้ว! 🌿', {
@@ -133,6 +152,11 @@ export default function OrderStatus() {
         tag: `order-${newOrder.id}`,
       });
       setStatusAlertShown(true);
+      showToast(
+        lang === 'th' ? 'พร้อมรับแล้วตอนนี้! ✨' : 'Ready for Pickup! ✨',
+        lang === 'th' ? 'แวะรับได้ที่ร้านวันใจ Soy ถนนวัวลาย' : 'Waiting for you at WanJai cart',
+        'success'
+      );
       if ('vibrate' in navigator) navigator.vibrate?.([200, 100, 200, 100, 400]);
     }
     prevStatusRef.current = newOrder.status;

@@ -376,6 +376,35 @@ if (typeof window !== 'undefined') {
 }
 
 /**
+ * Play gentle warm chime sound when order status transitions to preparing
+ */
+export function playPreparingChime() {
+  try {
+    initAudioContext();
+    const ctx = sharedAudioCtx || new (window.AudioContext || (window as any).webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    const now = ctx.currentTime;
+    osc.frequency.setValueAtTime(440.0, now);
+    osc.frequency.setValueAtTime(554.37, now + 0.15);
+    osc.frequency.setValueAtTime(659.25, now + 0.3);
+
+    gain.gain.setValueAtTime(0.25, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.75);
+  } catch (e) {
+    console.warn('Audio preparing chime error:', e);
+  }
+}
+
+/**
  * Play gentle chime sound when order status is ready
  */
 export function playReadyChime() {

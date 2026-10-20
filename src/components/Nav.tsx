@@ -23,6 +23,9 @@ import {
   Heart,
   Eye,
   Type,
+  Home as HomeIcon,
+  Search,
+  Mic,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLang } from '../contexts/LanguageContext';
@@ -102,7 +105,7 @@ export default function Nav({
       {/* Floating Modern Capsule Navbar (Image 43.21.png Inspired - Webapp Heritage Palette) */}
       <header className="sticky top-2 sm:top-3.5 z-40 px-3 sm:px-4 max-w-5xl mx-auto w-full transition-all">
         <div
-          className={`w-full rounded-full liquid-glass border border-white/80 shadow-md shadow-forest/5 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-2 sm:gap-3 ${
+          className={`w-full rounded-full liquid-glass border border-white/80 shadow-md shadow-forest/5 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1.5 sm:gap-3 box-border overflow-hidden ${
             isDualScreen ? 'duo-nav-active' : ''
           }`}
         >
@@ -110,19 +113,19 @@ export default function Nav({
           <Link
             to="/"
             onClick={() => triggerHaptic('tap')}
-            className="flex items-center gap-2 sm:gap-2.5 pl-0.5 group shrink-0"
+            className="flex items-center gap-1.5 sm:gap-2.5 pl-0.5 group shrink-0 min-w-0"
             aria-label="Wanchai Soy Home"
           >
-            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-full bg-forest text-cream flex items-center justify-center shadow-xs relative overflow-hidden group-hover:scale-105 transition">
-              <span className="font-display italic font-bold text-lg sm:text-xl leading-none">
+            <div className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-full bg-forest text-cream flex items-center justify-center shadow-xs relative overflow-hidden group-hover:scale-105 transition shrink-0">
+              <span className="font-display italic font-bold text-base sm:text-xl leading-none">
                 w
               </span>
             </div>
-            <div className="leading-tight hidden xs:block">
-              <div className="font-display italic font-bold text-forest text-base sm:text-lg leading-none tracking-tight">
+            <div className="leading-tight truncate">
+              <div className="font-display italic font-bold text-forest text-sm sm:text-lg leading-none tracking-tight">
                 Wanchai
               </div>
-              <div className="text-[10px] font-thai text-ink-muted tracking-wide -mt-0.5">
+              <div className="text-[9px] sm:text-[10px] font-thai text-ink-muted tracking-wide -mt-0.5 hidden xs:block">
                 {lang === 'th' ? 'วันใจ Soy · วัวลาย' : 'Wanchai Soy'}
               </div>
             </div>
@@ -151,8 +154,8 @@ export default function Nav({
           )}
 
           {/* Right Side: Capsule Action Pill + Utility Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Quick Large Font / Elder Mode Toggle */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Quick Large Font / Elder Mode Toggle - Visible on sm screens and above to prevent mobile bleeding */}
             <button
               type="button"
               onClick={() => {
@@ -168,7 +171,7 @@ export default function Nav({
                   ? 'ขยายขนาดตัวหนังสือ (สำหรับผู้สูงอายุและเด็ก)'
                   : 'Enlarge Text (For Seniors & Kids)'
               }
-              className={`h-9 sm:h-10 px-2.5 sm:px-3 rounded-full text-xs font-bold flex items-center gap-1.5 transition active:scale-95 shadow-2xs ${
+              className={`hidden sm:flex h-9 sm:h-10 px-2.5 sm:px-3 rounded-full text-xs font-bold items-center gap-1.5 transition active:scale-95 shadow-2xs ${
                 isElderMode
                   ? 'bg-amber-600 text-cream shadow-xs ring-2 ring-amber-400'
                   : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
@@ -176,13 +179,15 @@ export default function Nav({
               aria-label={lang === 'th' ? 'โหมดตัวหนังสือใหญ่' : 'Large Font'}
             >
               <span className="font-display font-bold text-sm sm:text-base leading-none">A+</span>
-              <span className="hidden sm:inline font-thai text-[11px]">
+              <span className="hidden md:inline font-thai text-[11px]">
                 {isElderMode ? (lang === 'th' ? 'ตัวใหญ่' : 'Large') : (lang === 'th' ? 'ขยายอักษร' : 'Font+')}
               </span>
             </button>
 
-            {/* Language Switcher */}
-            <LanguageToggle compact />
+            {/* Language Switcher - Visible on sm screens and above */}
+            <div className="hidden sm:block">
+              <LanguageToggle compact />
+            </div>
 
             {/* Desktop Only Extra Badges: QR & Points */}
             <div className="hidden lg:flex items-center gap-1.5">
@@ -298,6 +303,97 @@ export default function Nav({
           </div>
         </div>
       </header>
+
+      {/* Ergonomic One-Hand Mobile Bottom Dock (Thumb Zone Navigation) */}
+      <nav
+        aria-label="One-Hand Mobile Navigation"
+        className="fixed bottom-3 inset-x-3 z-40 sm:hidden pointer-events-auto"
+      >
+        <div className="max-w-md mx-auto rounded-full liquid-glass border border-white/80 shadow-2xl backdrop-blur-2xl px-3 py-1.5 flex items-center justify-between gap-1 shadow-forest/25">
+          {/* 1. Home */}
+          <Link
+            to="/"
+            onClick={() => {
+              triggerHaptic('tap');
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="flex-1 flex flex-col items-center justify-center py-1 text-forest hover:text-forest-dark transition active:scale-95"
+            aria-label={t.home}
+          >
+            <HomeIcon className="h-4.5 w-4.5" />
+            <span className="text-[10px] font-bold font-thai mt-0.5">
+              {lang === 'th' ? 'หน้าแรก' : 'Home'}
+            </span>
+          </Link>
+
+          {/* 2. Search / Browse Menu */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('tap');
+              const searchEl = document.getElementById('menu-search') || document.getElementById('bestsellers');
+              searchEl?.scrollIntoView({ behavior: 'smooth' });
+              const input = searchEl?.querySelector('input');
+              input?.focus();
+            }}
+            className="flex-1 flex flex-col items-center justify-center py-1 text-forest hover:text-forest-dark transition active:scale-95"
+            aria-label="Search Menu"
+          >
+            <Search className="h-4.5 w-4.5" />
+            <span className="text-[10px] font-bold font-thai mt-0.5">
+              {lang === 'th' ? 'ค้นหา' : 'Search'}
+            </span>
+          </button>
+
+          {/* 3. Center Voice Order Action (Thumb Hero Button) */}
+          <button
+            type="button"
+            onClick={() => {
+              triggerHaptic('medium');
+              window.dispatchEvent(new CustomEvent('open_voice_order'));
+            }}
+            className="h-11 w-11 -mt-4 rounded-full bg-gradient-to-tr from-terracotta to-amber-600 text-cream flex items-center justify-center shadow-lg active:scale-95 transition ring-3 ring-cream"
+            aria-label={t.voiceOrder}
+          >
+            <Mic className="h-5 w-5 text-honey animate-pulse" />
+          </button>
+
+          {/* 4. Cart & Checkout */}
+          <Link
+            to="/checkout"
+            onClick={() => triggerHaptic('tap')}
+            className="flex-1 flex flex-col items-center justify-center py-1 text-forest hover:text-forest-dark transition active:scale-95 relative"
+            aria-label={t.cart}
+          >
+            <div className="relative">
+              <ShoppingBag className="h-4.5 w-4.5" />
+              {count > 0 && (
+                <span className="absolute -top-1.5 -right-2 h-4 min-w-4 px-1 rounded-full bg-terracotta text-cream text-[9px] font-bold flex items-center justify-center shadow-2xs">
+                  {count}
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-bold font-thai mt-0.5">
+              {count > 0 ? `฿${subtotal}` : (lang === 'th' ? 'ตะกร้า' : 'Cart')}
+            </span>
+          </Link>
+
+          {/* 5. Menu Drawer Toggle */}
+          <button
+            type="button"
+            onClick={toggleMenu}
+            className={`flex-1 flex flex-col items-center justify-center py-1 transition active:scale-95 ${
+              isMenuOpen ? 'text-terracotta font-bold' : 'text-forest'
+            }`}
+            aria-label={t.menuNavigation}
+          >
+            <Menu className="h-4.5 w-4.5" />
+            <span className="text-[10px] font-bold font-thai mt-0.5">
+              {lang === 'th' ? 'เมนู' : 'Menu'}
+            </span>
+          </button>
+        </div>
+      </nav>
 
       {/* ONE-HANDED HAMBURGER DRAWER (Bottom Sheet on Mobile, Slide Drawer on Desktop) */}
       <AnimatePresence>

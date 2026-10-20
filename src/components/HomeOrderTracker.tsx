@@ -15,7 +15,7 @@ import {
   Flame,
 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { db, playReadyChime } from '../lib/firebase';
+import { db, playReadyChime, playPreparingChime } from '../lib/firebase';
 import { useLang } from '../contexts/LanguageContext';
 import { triggerHaptic } from '../lib/haptics';
 import type { Order } from '../types';
@@ -71,8 +71,16 @@ export default function HomeOrderTracker() {
               const data = { id: activeOrderId, ...docSnap.data() } as unknown as Order;
               setOrder(data);
 
+              // If status changed to preparing, play warm chime
+              if (
+                data.status === 'preparing' &&
+                (prevStatusRef.current === 'pending' || prevStatusRef.current === 'paid')
+              ) {
+                playPreparingChime();
+                triggerHaptic('medium');
+              }
               // If status changed to ready, play chime alert
-              if (data.status === 'ready' && prevStatusRef.current !== 'ready') {
+              else if (data.status === 'ready' && prevStatusRef.current !== 'ready') {
                 playReadyChime();
                 triggerHaptic('heavy');
               }
@@ -95,7 +103,13 @@ export default function HomeOrderTracker() {
           const found = Array.isArray(list) ? list[0] : list;
           if (found) {
             setOrder((current) => {
-              if (found.status === 'ready' && current?.status !== 'ready') {
+              if (
+                found.status === 'preparing' &&
+                (current?.status === 'pending' || current?.status === 'paid')
+              ) {
+                playPreparingChime();
+                triggerHaptic('medium');
+              } else if (found.status === 'ready' && current?.status !== 'ready') {
                 playReadyChime();
                 triggerHaptic('heavy');
               }

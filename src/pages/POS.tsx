@@ -12,12 +12,14 @@ import {
   VolumeX,
   Calculator,
   RotateCcw,
+  QrCode,
 } from 'lucide-react';
 import type { Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { baht, shortId, timeAgo } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PosDialPad from '../components/PosDialPad';
+import PosQrScannerModal from '../components/PosQrScannerModal';
 import { useFoldableSpanning } from '../hooks/useFoldableSpanning';
 import {
   applyQuickHapticPattern,
@@ -34,6 +36,7 @@ export default function POS() {
   const [sound, setSound] = useState(true);
   const [lastCount, setLastCount] = useState(0);
   const [showDialPad, setShowDialPad] = useState(false);
+  const [showQrScanner, setShowQrScanner] = useState(false);
   const [currentPattern, setCurrentPattern] = useState<HapticQuickPattern>(() => getCurrentQuickPattern());
 
   // Hook that detects if the foldable device is spanned across two screens
@@ -96,13 +99,26 @@ export default function POS() {
           </div>
 
           <div className="flex items-center gap-2 duo-nav-right">
+            {/* Camera QR Code Scanner for Customer Order IDs */}
+            <button
+              onClick={() => {
+                triggerHaptic('medium');
+                setShowQrScanner(true);
+              }}
+              className="h-11 px-3.5 sm:px-4 rounded-full bg-cream text-forest font-bold text-xs flex items-center gap-1.5 shadow hover:bg-white transition active:scale-95"
+              title={lang === 'th' ? 'สแกน QR ออเดอร์จากมือถือหรือใบเสร็จ' : 'Scan Order QR from customer device'}
+            >
+              <QrCode className="h-4 w-4 text-forest" />
+              <span>{lang === 'th' ? 'สแกน QR ออเดอร์' : 'Scan QR'}</span>
+            </button>
+
             {/* Quick Dial Pad Toggle Button */}
             <button
               onClick={() => setShowDialPad(!showDialPad)}
               className="h-11 px-4 rounded-full bg-honey text-forest font-bold text-xs flex items-center gap-1.5 shadow hover:bg-honey-dark transition active:scale-95"
             >
               <Calculator className="h-4 w-4" />
-              <span>{lang === 'th' ? 'แป้นคิดเงินหน้าร้าน' : 'Walk-by Dial Pad'}</span>
+              <span>{lang === 'th' ? 'แป้นคิดเงิน' : 'Dial Pad'}</span>
             </button>
 
             <button
@@ -221,6 +237,15 @@ export default function POS() {
           }}
         />
       )}
+
+      {/* POS Camera QR Scanner Modal for instant scanning of customer order IDs */}
+      <PosQrScannerModal
+        isOpen={showQrScanner}
+        onClose={() => setShowQrScanner(false)}
+        orders={orders}
+        onUpdateOrderStatus={update}
+        lang={lang}
+      />
     </div>
   );
 }

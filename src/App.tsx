@@ -10,6 +10,7 @@ import { useFoldableSpanning } from './hooks/useFoldableSpanning';
 import SessionExpiredModal from './components/SessionExpiredModal';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import QuickSettingsFloatingMenu from './components/QuickSettingsFloatingMenu';
+import RealtimeOrderStatusNotifier from './components/RealtimeOrderStatusNotifier';
 
 function AppShell() {
   // Hook that detects if the foldable device is spanned across two screens
@@ -29,6 +30,9 @@ function AppShell() {
         <Route path="/admin" element={<Admin />} />
         <Route path="/pos" element={<POS />} />
       </Routes>
+
+      {/* Real-time Order Status Notification System (Firestore snapshot listeners for preparing & ready) */}
+      <RealtimeOrderStatusNotifier />
 
       {/* Global 401 Session Expired Modal */}
       <SessionExpiredModal />

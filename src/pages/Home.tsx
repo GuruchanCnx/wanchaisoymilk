@@ -71,6 +71,12 @@ export default function Home() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
+  useEffect(() => {
+    const handleOpenVoice = () => setVoiceModalOpen(true);
+    window.addEventListener('open_voice_order', handleOpenVoice);
+    return () => window.removeEventListener('open_voice_order', handleOpenVoice);
+  }, []);
+
   const copyCoordinates = () => {
     navigator.clipboard.writeText(coordsText);
     setCopiedCoords(true);

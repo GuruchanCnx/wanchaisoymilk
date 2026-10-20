@@ -17,6 +17,7 @@ import type { Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { useCart } from '../contexts/CartContext';
 import { baht, shortId, timeAgo } from '../lib/format';
+import SpendingTrendsChart from './SpendingTrendsChart';
 
 interface SavedLocalOrder {
   id: number | string;
@@ -272,6 +273,9 @@ export default function OrderHistory() {
           </div>
         )}
       </div>
+
+      {/* 30-Day Spending Trends Visualization (Recharts Area Chart) */}
+      <SpendingTrendsChart orders={mergedOrders} lang={lang} />
 
       {/* Sync with Phone Number */}
       <div className="bg-cream-soft rounded-2xl border-2 border-forest/10 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
