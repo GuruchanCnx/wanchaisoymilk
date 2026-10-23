@@ -102,10 +102,10 @@ export default function Nav({
 
   return (
     <>
-      {/* Floating Modern Capsule Navbar (Image 43.21.png Inspired - Webapp Heritage Palette) */}
-      <header className="sticky top-2 sm:top-3.5 z-40 px-3 sm:px-4 max-w-5xl mx-auto w-full transition-all">
+      {/* Floating Modern Capsule Navbar */}
+      <header className="sticky top-2 sm:top-3 z-40 px-2 sm:px-4 max-w-6xl mx-auto w-full transition-all">
         <div
-          className={`w-full rounded-full liquid-glass border border-white/80 shadow-md shadow-forest/5 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1.5 sm:gap-3 box-border overflow-hidden ${
+          className={`w-full rounded-full liquid-glass border border-white/80 shadow-md shadow-forest/5 backdrop-blur-xl px-2.5 sm:px-4 py-1.5 sm:py-2 flex items-center justify-between gap-1.5 sm:gap-2.5 box-border ${
             isDualScreen ? 'duo-nav-active' : ''
           }`}
         >
@@ -113,88 +113,80 @@ export default function Nav({
           <Link
             to="/"
             onClick={() => triggerHaptic('tap')}
-            className="flex items-center gap-1.5 sm:gap-2.5 pl-0.5 group shrink-0 min-w-0"
+            className="flex items-center gap-1.5 sm:gap-2 pl-0.5 group shrink-0 min-w-0"
             aria-label="Wanchai Soy Home"
           >
-            <div className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-full bg-forest text-cream flex items-center justify-center shadow-xs relative overflow-hidden group-hover:scale-105 transition shrink-0">
-              <span className="font-display italic font-bold text-base sm:text-xl leading-none">
+            <div className="h-8.5 w-8.5 sm:h-9.5 sm:w-9.5 rounded-full bg-forest text-cream flex items-center justify-center shadow-xs relative overflow-hidden group-hover:scale-105 transition shrink-0">
+              <span className="font-display italic font-bold text-base sm:text-lg leading-none">
                 w
               </span>
             </div>
             <div className="leading-tight truncate">
-              <div className="font-display italic font-bold text-forest text-sm sm:text-lg leading-none tracking-tight">
+              <div className="font-display italic font-bold text-forest text-sm sm:text-base leading-none tracking-tight">
                 Wanchai
               </div>
-              <div className="text-[9px] sm:text-[10px] font-thai text-ink-muted tracking-wide -mt-0.5 hidden xs:block">
+              <div className="text-[9px] font-thai text-ink-muted tracking-wide -mt-0.5 hidden xs:block">
                 {lang === 'th' ? 'วันใจ Soy · วัวลาย' : 'Wanchai Soy'}
               </div>
             </div>
           </Link>
 
-          {/* Center: Minimalist Text Navigation Links (Image 43.21.png style: Work, About, Playground...) */}
+          {/* Center: Minimalist Text Navigation Links (Adaptive responsive collapsing to never overflow) */}
           {scrollTargets && (
             <nav
-              className={`hidden md:flex items-center gap-4 lg:gap-6 flex-1 ${
-                isDualScreen ? 'justify-end pr-4' : 'justify-center'
+              className={`hidden md:flex items-center gap-2 lg:gap-3.5 flex-1 min-w-0 px-1 overflow-hidden ${
+                isDualScreen ? 'justify-end pr-2' : 'justify-center'
               }`}
             >
-              {scrollTargets.map((s) => (
-                <button
-                  key={s.id}
-                  onClick={() => {
-                    triggerHaptic('tap');
-                    jump(s.id);
-                  }}
-                  className="text-xs lg:text-[13px] font-semibold text-ink-muted hover:text-forest transition-colors py-1 px-2 rounded-full hover:bg-forest/5"
-                >
-                  {lang === 'th' ? s.label_th : s.label_en}
-                </button>
-              ))}
+              {scrollTargets.map((s, idx) => {
+                // Show core 3-4 sections on md/lg, all on xl+ to completely prevent header overflow
+                const isSecondary = idx > 2;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => {
+                      triggerHaptic('tap');
+                      jump(s.id);
+                    }}
+                    className={`text-xs font-semibold text-ink-muted hover:text-forest transition-colors py-1 px-2 rounded-full hover:bg-forest/5 whitespace-nowrap shrink-0 ${
+                      isSecondary ? 'hidden xl:inline-block' : 'inline-block'
+                    }`}
+                  >
+                    {lang === 'th' ? s.label_th : s.label_en}
+                  </button>
+                );
+              })}
             </nav>
           )}
 
-          {/* Right Side: Capsule Action Pill + Utility Controls */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Quick Large Font / Elder Mode Toggle - Visible only on large desktop screens to prevent top bar clipping */}
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic('selection');
-                toggleElderMode();
-              }}
-              title={
-                isElderMode
-                  ? lang === 'th'
-                    ? 'โหมดตัวหนังสือใหญ่ (เปิดใช้งานอยู่) - แตะเพื่อปรับขนาดปกติ'
-                    : 'Large Font Mode (Active) - Tap for normal'
-                  : lang === 'th'
-                  ? 'ขยายขนาดตัวหนังสือ (สำหรับผู้สูงอายุและเด็ก)'
-                  : 'Enlarge Text (For Seniors & Kids)'
-              }
-              className={`hidden lg:flex h-9 sm:h-10 px-2.5 rounded-full text-xs font-bold items-center gap-1 transition active:scale-95 shadow-2xs ${
-                isElderMode
-                  ? 'bg-amber-600 text-cream shadow-xs ring-2 ring-amber-400'
-                  : 'bg-white/80 border border-forest/20 text-forest hover:bg-forest/10'
-              }`}
-              aria-label={lang === 'th' ? 'โหมดตัวหนังสือใหญ่' : 'Large Font'}
+          {/* Right Side: Capsule Action Pill + Utility Controls (Guaranteed no overflow) */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Convenient 1-Click Backend Admin & Inventory Button */}
+            <Link
+              to="/admin"
+              onClick={() => triggerHaptic('tap')}
+              title={lang === 'th' ? 'ระบบจัดการหลังร้านและสต็อก (Admin)' : 'Backend Admin & Inventory'}
+              className="h-8.5 sm:h-9 px-2 sm:px-3 rounded-full bg-forest/10 hover:bg-forest hover:text-cream text-forest font-bold text-xs flex items-center gap-1.5 transition active:scale-95 border border-forest/20 shrink-0 shadow-2xs group"
+              aria-label="Backend Admin"
             >
-              <span className="font-display font-bold text-sm leading-none">A+</span>
-            </button>
+              <ShieldCheck className="h-3.5 w-3.5 text-forest group-hover:text-cream transition-colors" />
+              <span className="hidden xs:inline">{lang === 'th' ? 'แอดมิน' : 'Admin'}</span>
+            </Link>
 
-            {/* Language Switcher - Visible only on large desktop screens to prevent top bar clipping */}
-            <div className="hidden lg:block">
+            {/* Language Switcher - Compact */}
+            <div className="hidden sm:block shrink-0">
               <LanguageToggle compact instanceId="nav-top-bar" />
             </div>
 
-            {/* Desktop Only Extra Badges: QR & Points */}
-            <div className="hidden xl:flex items-center gap-1.5">
+            {/* Extra Badges: QR & Points (Visible only on ultra-wide screens to prevent clipping) */}
+            <div className="hidden 2xl:flex items-center gap-1.5 shrink-0">
               <button
                 onClick={() => {
                   triggerHaptic('tap');
                   setShowQrModal(true);
                 }}
                 title={lang === 'th' ? 'สแกน QR สั่งที่โต๊ะ/หน้าร้าน' : 'Table / Menu QR Code'}
-                className="h-9 sm:h-10 w-9 sm:w-10 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center justify-center transition active:scale-95 shadow-2xs"
+                className="h-9 w-9 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center justify-center transition active:scale-95 shadow-2xs"
                 aria-label="Open Menu QR"
               >
                 <QrCode className="h-4 w-4" />
@@ -206,19 +198,18 @@ export default function Nav({
                   setShowProfileModal(true);
                 }}
                 title={lang === 'th' ? 'แต้มสะสมวันใจคลับ' : 'Loyalty Points Tracker'}
-                className="h-9 sm:h-10 px-3 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center gap-1.5 text-xs font-bold transition active:scale-95 shadow-2xs"
+                className="h-9 px-2.5 rounded-full bg-white/80 border border-forest/20 text-forest hover:bg-forest/10 flex items-center gap-1 text-xs font-bold transition active:scale-95 shadow-2xs"
               >
-                <Award className="h-4 w-4 text-honey" />
+                <Award className="h-3.5 w-3.5 text-honey" />
                 <span className="font-mono text-xs text-forest">{points}</span>
-                <span className="text-[10px] text-ink-muted">{lang === 'th' ? 'แต้ม' : 'pts'}</span>
               </button>
             </div>
 
-            {/* Signature Right Action Capsule Pill (Cart & Checkout) */}
+            {/* Signature Right Action Capsule Pill (Cart & Checkout) - Always guaranteed full width */}
             <Link
               to="/checkout"
               onClick={() => triggerHaptic('medium')}
-              className={`relative h-9 sm:h-10 px-3 sm:px-4 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition shrink-0 ${
+              className={`relative h-8.5 sm:h-9 px-3 sm:px-3.5 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition shrink-0 whitespace-nowrap min-w-fit ${
                 isCartShaking ? 'animate-cart-shake ring-2 ring-terracotta' : ''
               }`}
               aria-label={t.cart}
@@ -237,7 +228,7 @@ export default function Nav({
                 transition={{ duration: 0.55, ease: 'easeOut' }}
                 className="flex items-center justify-center"
               >
-                <ShoppingBag className="h-4 w-4" />
+                <ShoppingBag className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </motion.div>
 
               <span className="font-bold text-xs whitespace-nowrap">
@@ -489,6 +480,32 @@ export default function Nav({
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
+
+                {/* 1.5 Prominent Backend Admin & Inventory Direct Card */}
+                <Link
+                  to="/admin"
+                  onClick={() => {
+                    triggerHaptic('medium');
+                    setIsMenuOpen(false);
+                  }}
+                  className="p-3.5 rounded-2xl bg-forest/10 hover:bg-forest/15 border border-forest/20 flex items-center justify-between transition active:scale-95 shadow-xs group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-xl bg-forest text-cream flex items-center justify-center shadow-xs group-hover:scale-105 transition">
+                      <ShieldCheck className="h-4.5 w-4.5 text-honey" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-forest flex items-center gap-1.5">
+                        <span>{lang === 'th' ? 'ระบบจัดการหลังร้าน (Admin)' : 'Backend Admin & Inventory'}</span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-forest text-cream font-mono font-bold">STAFF</span>
+                      </div>
+                      <div className="text-[10px] text-ink-muted mt-0.5">
+                        {lang === 'th' ? 'จัดการสต็อก, วางข้อมูลตาราง, POS, และวิเคราะห์' : 'Live inventory, batch paste update & POS'}
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 text-forest/50 group-hover:text-forest transition" />
+                </Link>
 
                 {/* 2. Menu Categories Quick Jump (if on Home page or available) */}
                 {scrollTargets && scrollTargets.length > 0 && (

@@ -100,7 +100,7 @@ export default function QuickSettingsFloatingMenu() {
   const activeCount = (isElderMode ? 1 : 0) + (isHighContrast ? 1 : 0);
 
   return (
-    <div className="fixed bottom-5 left-4 z-40">
+    <div className="hidden sm:block fixed bottom-6 left-6 z-30">
       <AnimatePresence>
         {isOpen && (
           <>

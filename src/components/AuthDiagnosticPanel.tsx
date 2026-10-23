@@ -77,8 +77,8 @@ export default function AuthDiagnosticPanel() {
 
   return (
     <>
-      {/* Discreet Diagnostic Trigger Button on bottom-left */}
-      <div className="fixed bottom-4 left-4 z-40">
+      {/* Discreet Diagnostic Trigger Button on bottom-left (desktop only to prevent mobile nav obstruction) */}
+      <div className="hidden sm:block fixed bottom-4 left-4 z-20">
         <button
           type="button"
           onClick={() => {

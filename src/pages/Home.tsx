@@ -708,10 +708,10 @@ export default function Home() {
           setVoiceModalOpen(true);
         }}
         title={t.voiceOrder}
-        className="fixed bottom-24 right-4 z-40 h-12 px-4 rounded-full bg-forest text-cream shadow-2xl flex items-center gap-2 hover:bg-forest-dark active:scale-95 transition border border-white/50 backdrop-blur-md group"
+        className="fixed bottom-32 sm:bottom-20 right-4 sm:right-6 z-30 h-11 px-3.5 rounded-full bg-forest text-cream shadow-xl flex items-center gap-2 hover:bg-forest-dark active:scale-95 transition border border-white/50 backdrop-blur-md group"
       >
-        <div className="h-7 w-7 rounded-full bg-forest-dark flex items-center justify-center text-honey group-hover:scale-110 transition">
-          <Mic className="h-4 w-4" />
+        <div className="h-6.5 w-6.5 rounded-full bg-forest-dark flex items-center justify-center text-honey group-hover:scale-110 transition">
+          <Mic className="h-3.5 w-3.5" />
         </div>
         <span className="text-xs font-bold font-thai hidden sm:inline">
           {t.voiceOrder}
@@ -725,7 +725,6 @@ export default function Home() {
         onClose={() => setVoiceModalOpen(false)}
         products={products}
       />
-      <BackToTop />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ClipboardPaste,
@@ -58,7 +58,7 @@ export default function BatchInventoryUpdateModal({
   const [copiedTemplate, setCopiedTemplate] = useState(false);
 
   // Helper function to match text to a Product
-  const findProductMatch = (query: string): Product | null => {
+  const findProductMatch = useCallback((query: string): Product | null => {
     const q = query.trim().toLowerCase();
     if (!q) return null;
 
@@ -112,7 +112,7 @@ export default function BatchInventoryUpdateModal({
     }
 
     return null;
-  };
+  }, [products]);
 
   // Live intelligent parser of pasted text
   const parsedRows: ParsedBatchRow[] = useMemo(() => {
@@ -228,7 +228,7 @@ export default function BatchInventoryUpdateModal({
         calculatedPrice: finalPrice,
       };
     });
-  }, [rawText, products, updateMode, updatePrice, lang]);
+  }, [rawText, findProductMatch, updateMode, updatePrice, lang]);
 
   const validMatchedRows = parsedRows.filter((r) => r.isMatched && r.matchedProduct);
   const unmatchedRows = parsedRows.filter((r) => !r.isMatched);
