@@ -39,6 +39,7 @@ import MenuQrModal from './MenuQrModal';
 import UserProfileModal from './UserProfileModal';
 import AccessibilitySettingsMenu from './AccessibilitySettingsMenu';
 import AccessibilitySettings from './AccessibilitySettings';
+import NavAccessibilityMenu from './NavAccessibilityMenu';
 
 export default function Nav({
   scrollTargets,
@@ -172,6 +173,9 @@ export default function Nav({
               <ShieldCheck className="h-3.5 w-3.5 text-forest group-hover:text-cream transition-colors" />
               <span className="hidden xs:inline">{lang === 'th' ? 'แอดมิน' : 'Admin'}</span>
             </Link>
+
+            {/* Accessibility Menu: Elder Mode & High Contrast toggles */}
+            <NavAccessibilityMenu />
 
             {/* Language Switcher - Compact */}
             <div className="hidden sm:block shrink-0">

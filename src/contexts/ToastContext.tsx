@@ -1,11 +1,11 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { CheckCircle2, AlertCircle, Sparkles, X, WifiOff, ChevronUp } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Sparkles, X, WifiOff, Wifi, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../lib/haptics';
 import { useLang } from './LanguageContext';
 import OrderStatusToast, { OrderStatusToastData } from '../components/OrderStatusToast';
 
-export type ToastType = 'success' | 'info' | 'error' | 'order-status';
+export type ToastType = 'success' | 'info' | 'error' | 'alert' | 'order-status';
 
 export interface ToastAction {
   label: string;
@@ -59,14 +59,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         triggerHaptic('success');
       } else if (type === 'error') {
         triggerHaptic('error');
+      } else if (type === 'alert') {
+        triggerHaptic('warning');
       } else {
         triggerHaptic('light');
       }
 
       setToasts((prev) => [...prev.slice(-3), { id, title, description, type, action }]);
 
-      // Auto dismiss after 5s for action toasts, 3.2s for standard
-      const timeout = action ? 5000 : 3200;
+      // Auto dismiss after 6s for alert toasts, 5s for action toasts, 3.2s for standard
+      const timeout = type === 'alert' ? 6500 : action ? 5000 : 3200;
       setTimeout(() => {
         removeToast(id);
       }, timeout);
@@ -123,7 +125,19 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       setIsOnline(false);
       setIsOfflineBannerDismissed(false);
       triggerHaptic('warning');
+      showToast(
+        lang === 'th' ? 'ขาดการเชื่อมต่ออินเทอร์เน็ต (ออฟไลน์)' : 'Internet Connection Lost',
+        lang === 'th'
+          ? 'โหมด PWA กำลังทำงาน คุณยังสามารถดูเมนูและสั่งสินค้าได้ ระบบจะส่งคำสั่งซื้ออัตโนมัติเมื่อกลับมาออนไลน์'
+          : 'PWA offline cache active — you can browse menu & place orders freely. Auto-syncs when back online.',
+        'alert'
+      );
     };
+
+    // Check initial state
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      handleOffline();
+    }
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -237,10 +251,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 <div
                   className={`rounded-2xl p-3.5 shadow-2xl backdrop-blur-xl border flex items-center gap-3 ${
                     toast.type === 'success'
-                      ? 'bg-forest/95 text-cream border-emerald-500/40'
+                      ? 'bg-forest/95 text-cream border-emerald-500/40 shadow-forest/20'
                       : toast.type === 'error'
-                      ? 'bg-chili/95 text-cream border-red-500/40'
-                      : 'bg-cream/95 text-forest border-forest/20'
+                      ? 'bg-chili/95 text-cream border-red-500/40 shadow-red-950/20'
+                      : toast.type === 'alert'
+                      ? 'bg-gradient-to-r from-amber-950/95 via-amber-900/95 to-terracotta/95 text-cream border-amber-400/40 shadow-amber-950/25 ring-1 ring-amber-400/20'
+                      : 'bg-cream/95 text-forest border-forest/20 shadow-forest/10'
                   }`}
                 >
                   <div className="shrink-0">
@@ -251,6 +267,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                     ) : toast.type === 'error' ? (
                       <div className="h-8 w-8 rounded-full bg-red-500/25 flex items-center justify-center text-white">
                         <AlertCircle className="h-5 w-5" />
+                      </div>
+                    ) : toast.type === 'alert' ? (
+                      <div className="h-8 w-8 rounded-full bg-amber-500/30 flex items-center justify-center text-honey animate-pulse">
+                        <WifiOff className="h-4.5 w-4.5" />
                       </div>
                     ) : (
                       <div className="h-8 w-8 rounded-full bg-forest/15 flex items-center justify-center text-forest">
