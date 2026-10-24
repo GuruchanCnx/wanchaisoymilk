@@ -136,7 +136,7 @@ export default function POS() {
 
   // Register Handlers
   const addToCart = (product: Product) => {
-    triggerHaptic('tap');
+    triggerHaptic('medium');
     const existingIndex = cart.findIndex((item) => item.product_id === product.id);
 
     if (existingIndex > -1) {
@@ -222,6 +222,7 @@ export default function POS() {
 
       if (res.ok) {
         const created = await res.json();
+        triggerHaptic('success');
         showToast(
           lang === 'th' ? `ลงบิลสำเร็จ #${created?.id || ''}` : `POS Order Saved #${created?.id || ''}`,
           lang === 'th' ? `ยอดรวม ${baht(cartSubtotal)} รับชำระเรียบร้อย` : `Total ${baht(cartSubtotal)} recorded`,
@@ -231,6 +232,7 @@ export default function POS() {
         loadOrders();
       }
     } catch (e) {
+      triggerHaptic('error');
       console.warn('Failed to submit POS order', e);
     } finally {
       setIsSubmitting(false);

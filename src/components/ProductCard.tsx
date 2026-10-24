@@ -4,6 +4,7 @@ import type { Product } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import StatusChip from './StatusChip';
 import { baht } from '../lib/format';
+import { triggerHaptic } from '../lib/haptics';
 
 export default function ProductCard({ product, onTap }: { product: Product; onTap: () => void }) {
   const { lang } = useLang();
@@ -12,7 +13,10 @@ export default function ProductCard({ product, onTap }: { product: Product; onTa
 
   return (
     <motion.button
-      onClick={onTap}
+      onClick={() => {
+        triggerHaptic('tap');
+        onTap();
+      }}
       disabled={soldOut || !product.available}
       whileTap={soldOut ? {} : { scale: 0.97 }}
       className={`group text-left rounded-3xl liquid-glass border overflow-hidden shadow-xs transition-all ${

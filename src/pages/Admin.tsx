@@ -43,6 +43,7 @@ import LanguageToggle from '../components/LanguageToggle';
 import HapticConfigPanel from '../components/HapticConfigPanel';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryManager from '../components/InventoryManager';
+import RevenueOverviewChart from '../components/RevenueOverviewChart';
 import { useAccessibility } from '../contexts/AccessibilityContext';
 
 type Tab = 'products' | 'inventory' | 'orders' | 'analytics' | 'haptics' | 'settings' | 'database' | 'emails';
@@ -312,6 +313,13 @@ export default function Admin() {
             </Link>
           </div>
         </div>
+
+        {/* Recharts Revenue & Daily Order Volume Overview Chart (iPhone Duo Dual-Screen Optimized) */}
+        {(tab === 'products' || tab === 'analytics') && (
+          <div className="mb-6">
+            <RevenueOverviewChart />
+          </div>
+        )}
 
         {tab === 'products' && <ProductsTab />}
         {tab === 'inventory' && <InventoryManager />}

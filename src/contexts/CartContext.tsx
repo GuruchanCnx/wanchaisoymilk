@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { triggerHaptic } from '../lib/haptics';
 
 export type CartItem = {
   key: string;              // unique cart line id
@@ -48,6 +49,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   useEffect(() => { localStorage.setItem('cart', JSON.stringify(items)); }, [items]);
 
   const add = (item: CartItem) => {
+    triggerHaptic('medium');
     setItems((prev) => {
       // merge identical lines
       const existing = prev.find(
@@ -67,9 +69,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     // Trigger cart bounce/shake animation
     setBumpKey((prev) => prev + 1);
   };
-  const updateQty = (key: string, qty: number) => setItems((prev) => qty <= 0 ? prev.filter((p) => p.key !== key) : prev.map((p) => p.key === key ? { ...p, qty } : p));
-  const remove = (key: string) => setItems((prev) => prev.filter((p) => p.key !== key));
-  const clear = () => setItems([]);
+  const updateQty = (key: string, qty: number) => {
+    triggerHaptic('light');
+    setItems((prev) => (qty <= 0 ? prev.filter((p) => p.key !== key) : prev.map((p) => (p.key === key ? { ...p, qty } : p))));
+  };
+  const remove = (key: string) => {
+    triggerHaptic('warning');
+    setItems((prev) => prev.filter((p) => p.key !== key));
+  };
+  const clear = () => {
+    triggerHaptic('medium');
+    setItems([]);
+  };
   const subtotal = items.reduce((s, i) => s + i.unit_price * i.qty, 0);
   const count = items.reduce((s, i) => s + i.qty, 0);
 
