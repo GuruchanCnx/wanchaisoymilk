@@ -42,3 +42,15 @@ export type OrderItem = {
   extras: string[];
   notes?: string;
 };
+
+export interface IngredientItem {
+  id: string;
+  name_th: string;
+  name_en: string;
+  category: 'raw_materials' | 'dairy_liquids' | 'dry_goods' | 'packaging';
+  current_stock: number;
+  min_threshold: number;
+  unit: string;
+  last_updated?: string;
+  notes?: string;
+}

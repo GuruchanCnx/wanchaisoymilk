@@ -13,27 +13,82 @@ import {
   Sparkles,
   Zap,
   ClipboardPaste,
+  Wheat,
+  Milk,
+  Scale,
+  Flame,
+  Coffee,
+  Edit2,
+  Filter,
+  Layers,
+  ArrowRight,
+  TrendingDown,
+  Info,
 } from 'lucide-react';
-import type { Product } from '../types';
+import type { Product, IngredientItem } from '../types';
 import { useLang } from '../contexts/LanguageContext';
 import { useToast } from '../contexts/ToastContext';
 import { triggerHaptic } from '../lib/haptics';
 import { baht } from '../lib/format';
+import {
+  loadIngredients,
+  saveIngredients,
+  updateIngredientStock,
+  getLowStockIngredients,
+} from '../lib/ingredients';
 import BatchInventoryUpdateModal from './BatchInventoryUpdateModal';
+import SmoothScrollMenu from './SmoothScrollMenu';
 
 export default function InventoryManager() {
   const { lang } = useLang();
   const { showToast } = useToast();
+
+  // Primary Sub-Tab Switcher: 'ingredients' vs 'products'
+  const [subTab, setSubTab] = useState<'ingredients' | 'products'>('ingredients');
+
+  // Finished Products State
   const [products, setProducts] = useState<Product[]>([]);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState<'all' | 'drinks' | 'snacks'>('all');
   const [filterStatus, setFilterStatus] = useState<'all' | 'low' | 'out'>('all');
 
+  // Ingredients State
+  const [ingredients, setIngredients] = useState<IngredientItem[]>(() => loadIngredients());
+  const [ingredientFilter, setIngredientFilter] = useState<'all' | 'low' | 'raw_materials' | 'dairy_liquids' | 'dry_goods' | 'packaging'>('all');
+  const [ingredientSearch, setIngredientSearch] = useState('');
+  const [editingIngredient, setEditingIngredient] = useState<IngredientItem | null>(null);
+  const [isAddIngredientOpen, setIsAddIngredientOpen] = useState(false);
+
+  // New Ingredient Form State
+  const [newIngForm, setNewIngForm] = useState<Partial<IngredientItem>>({
+    name_th: '',
+    name_en: '',
+    category: 'raw_materials',
+    current_stock: 10,
+    min_threshold: 5,
+    unit: 'kg (กก.)',
+    notes: '',
+  });
+
+  // Listen for cross-component / POS updates to ingredient inventory
+  useEffect(() => {
+    const handleUpdate = () => {
+      setIngredients(loadIngredients());
+    };
+    window.addEventListener('ingredient_inventory_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('ingredient_inventory_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
+
+  // Load Finished Products from API
   const loadProducts = useCallback(async () => {
-    setLoading(true);
+    setLoadingProducts(true);
     try {
       const res = await fetch('/api/products');
       const data = await res.json();
@@ -41,7 +96,7 @@ export default function InventoryManager() {
     } catch (e) {
       console.warn('Failed to load inventory', e);
     } finally {
-      setLoading(false);
+      setLoadingProducts(false);
     }
   }, []);
 
@@ -49,11 +104,11 @@ export default function InventoryManager() {
     loadProducts();
   }, [loadProducts]);
 
+  // Handle Finished Product Stock Update
   const updateProductStock = async (id: number, newStock: number, soldOut?: boolean) => {
     setSavingId(id);
     triggerHaptic('light');
 
-    // Optimistic UI update
     setProducts((prev) =>
       prev.map((p) => {
         if (p.id === id) {
@@ -79,7 +134,9 @@ export default function InventoryManager() {
       if (res.ok) {
         showToast(
           lang === 'th' ? 'อัปเดตสต็อกเรียบร้อย' : 'Stock Updated',
-          lang === 'th' ? `สินค้า #${id} มีคงเหลือ ${Math.max(0, newStock)} ชิ้น` : `Item #${id} now has ${Math.max(0, newStock)} in stock`,
+          lang === 'th'
+            ? `สินค้า #${id} มีคงเหลือ ${Math.max(0, newStock)} ชิ้น`
+            : `Item #${id} now has ${Math.max(0, newStock)} in stock`,
           'success'
         );
       }
@@ -90,69 +147,125 @@ export default function InventoryManager() {
     }
   };
 
-  const updateBatchTime = async (id: number, nextBatchTime: string) => {
-    setSavingId(id);
+  // Handle Ingredient Stock Adjustment
+  const handleAdjustIngredient = (id: string, delta: number) => {
     triggerHaptic('tap');
+    const target = ingredients.find((i) => i.id === id);
+    if (!target) return;
+    const nextVal = Math.max(0, Math.round((target.current_stock + delta) * 10) / 10);
+    const updated = updateIngredientStock(id, nextVal);
+    setIngredients(updated);
 
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, next_batch_time: nextBatchTime } : p))
-    );
-
-    try {
-      await fetch('/api/products', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id,
-          next_batch_time: nextBatchTime,
-        }),
-      });
+    if (nextVal <= target.min_threshold) {
       showToast(
-        lang === 'th' ? 'บันทึกเวลาต้มหม้อถัดไปแล้ว' : 'Next Batch Time Saved',
-        `${nextBatchTime}`,
-        'info'
+        lang === 'th' ? '⚠️ แจ้งเตือนวัตถุดิบใกล้หมด!' : '⚠️ Low Stock Alert!',
+        lang === 'th'
+          ? `${target.name_th} เหลือเพียง ${nextVal} ${target.unit}`
+          : `${target.name_en} is down to ${nextVal} ${target.unit}`,
+        'warning'
       );
-    } catch {}
-    setSavingId(null);
+    }
   };
 
-  const bulkRestockCategory = async (cat: 'drinks' | 'snacks', amount: number) => {
+  const handleSetIngredientDirect = (id: string, value: number) => {
+    const safeVal = Math.max(0, Number(value) || 0);
+    const updated = updateIngredientStock(id, safeVal);
+    setIngredients(updated);
+  };
+
+  // Save changes to ingredient threshold or details
+  const handleSaveIngredientEdit = () => {
+    if (!editingIngredient) return;
     triggerHaptic('medium');
-    setLoading(true);
-
-    const targetProducts = products.filter((p) => p.category === cat);
-    for (const p of targetProducts) {
-      const nextStock = (p.stock || 0) + amount;
-      await fetch('/api/products', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: p.id,
-          stock: nextStock,
-          sold_out: false,
-        }),
-      });
-    }
-
+    const updated = ingredients.map((item) =>
+      item.id === editingIngredient.id
+        ? { ...editingIngredient, last_updated: new Date().toISOString() }
+        : item
+    );
+    saveIngredients(updated);
+    setIngredients(updated);
+    setEditingIngredient(null);
     showToast(
-      lang === 'th'
-        ? `เติมสต็อกหมวด ${cat === 'drinks' ? 'เครื่องดื่ม' : 'ขนม'} +${amount} สำเร็จ`
-        : `Bulk Restocked ${cat} by +${amount}`,
-      lang === 'th' ? 'อัปเดตสต็อกสินค้าทั้งหมดในหมวดเรียบร้อย' : 'All items in category updated',
+      lang === 'th' ? 'บันทึกเกณฑ์วัตถุดิบสำเร็จ' : 'Ingredient Threshold Saved',
+      lang === 'th' ? 'เกณฑ์แจ้งเตือนสต็อกต่ำถูกอัปเดตเรียบร้อย' : 'Low stock notification rules updated',
       'success'
     );
-
-    await loadProducts();
   };
 
-  // Stats calculations
+  // Add new ingredient
+  const handleAddNewIngredient = () => {
+    if (!newIngForm.name_th || !newIngForm.unit) {
+      showToast(
+        lang === 'th' ? 'กรุณากรอกชื่อและหน่วยวัตถุดิบ' : 'Please provide name and unit',
+        '',
+        'warning'
+      );
+      return;
+    }
+    triggerHaptic('success');
+    const newId = `ing-${Date.now().toString(36)}`;
+    const newEntry: IngredientItem = {
+      id: newId,
+      name_th: newIngForm.name_th || 'วัตถุดิบใหม่',
+      name_en: newIngForm.name_en || newIngForm.name_th || 'New Ingredient',
+      category: (newIngForm.category as any) || 'raw_materials',
+      current_stock: Number(newIngForm.current_stock) || 0,
+      min_threshold: Number(newIngForm.min_threshold) || 5,
+      unit: newIngForm.unit || 'กก.',
+      notes: newIngForm.notes || '',
+      last_updated: new Date().toISOString(),
+    };
+
+    const nextList = [...ingredients, newEntry];
+    saveIngredients(nextList);
+    setIngredients(nextList);
+    setIsAddIngredientOpen(false);
+    setNewIngForm({
+      name_th: '',
+      name_en: '',
+      category: 'raw_materials',
+      current_stock: 10,
+      min_threshold: 5,
+      unit: 'kg (กก.)',
+      notes: '',
+    });
+
+    showToast(
+      lang === 'th' ? 'เพิ่มวัตถุดิบใหม่สำเร็จ' : 'Ingredient Added',
+      `${newEntry.name_th} (${newEntry.current_stock} ${newEntry.unit})`,
+      'success'
+    );
+  };
+
+  // Ingredient Metrics
+  const lowStockIngredients = getLowStockIngredients(ingredients);
+  const criticalIngredients = ingredients.filter(
+    (i) => i.current_stock <= i.min_threshold / 2 || i.current_stock <= 0
+  );
+
+  // Filtered Ingredients
+  const filteredIngredients = ingredients.filter((item) => {
+    const matchSearch = (item.name_th + item.name_en + (item.notes || ''))
+      .toLowerCase()
+      .includes(ingredientSearch.toLowerCase());
+    let matchFilter = true;
+    if (ingredientFilter === 'low') matchFilter = item.current_stock <= item.min_threshold;
+    else if (ingredientFilter !== 'all') matchFilter = item.category === ingredientFilter;
+    return matchSearch && matchFilter;
+  });
+
+  // Finished Product Metrics
   const totalItems = products.length;
   const totalUnits = products.reduce((acc, p) => acc + (Number(p.stock) || 0), 0);
-  const lowStockCount = products.filter((p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 10).length;
-  const outOfStockCount = products.filter((p) => (p.stock ?? 0) <= 0 || p.sold_out).length;
+  const lowStockProductsCount = products.filter(
+    (p) => (p.stock ?? 0) > 0 && (p.stock ?? 0) <= 10
+  ).length;
+  const outOfStockProductsCount = products.filter(
+    (p) => (p.stock ?? 0) <= 0 || p.sold_out
+  ).length;
 
-  // Filtered list
-  const filtered = products.filter((p) => {
+  // Filtered Products
+  const filteredProducts = products.filter((p) => {
     const matchSearch = (p.name_th + p.name_en + p.slug)
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
@@ -169,285 +282,360 @@ export default function InventoryManager() {
 
   return (
     <div className="space-y-6">
-      {/* Overview Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {/* 1. Total Products */}
-        <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-ink-muted text-xs">
-            <span>{lang === 'th' ? 'รายการสินค้า' : 'Total Items'}</span>
-            <Boxes className="h-4 w-4 text-forest" />
-          </div>
-          <div className="mt-2 font-display italic font-bold text-2xl text-forest">
-            {totalItems}
-          </div>
-          <span className="text-[11px] text-ink-muted mt-0.5">
-            {lang === 'th' ? 'ในฐานข้อมูล' : 'In catalog'}
-          </span>
-        </div>
-
-        {/* 2. Total In-Stock Units */}
-        <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between text-ink-muted text-xs">
-            <span>{lang === 'th' ? 'จำนวนคงเหลือ' : 'Stock Units'}</span>
-            <Package className="h-4 w-4 text-honey" />
-          </div>
-          <div className="mt-2 font-display italic font-bold text-2xl text-forest">
-            {totalUnits}
-          </div>
-          <span className="text-[11px] text-emerald-700 font-semibold mt-0.5">
-            {lang === 'th' ? 'ถุง / ชิ้น พร้อมขาย' : 'Units available'}
-          </span>
-        </div>
-
-        {/* 3. Low Stock Alert */}
-        <div
-          onClick={() => setFilterStatus(filterStatus === 'low' ? 'all' : 'low')}
-          className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between cursor-pointer transition active:scale-95 ${
-            filterStatus === 'low'
-              ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-400'
-              : 'liquid-glass border-amber-300/60 hover:border-amber-400'
-          }`}
-        >
-          <div className="flex items-center justify-between text-amber-800 text-xs font-bold">
-            <span>{lang === 'th' ? 'สต็อกใกล้หมด' : 'Low Stock'}</span>
-            <AlertTriangle className="h-4 w-4 text-amber-600 animate-pulse" />
-          </div>
-          <div className="mt-2 font-display italic font-bold text-2xl text-amber-800">
-            {lowStockCount}
-          </div>
-          <span className="text-[11px] text-amber-700 mt-0.5">
-            {lang === 'th' ? 'เหลือน้อยกว่า 10 ชิ้น' : '< 10 units left'}
-          </span>
-        </div>
-
-        {/* 4. Out of Stock */}
-        <div
-          onClick={() => setFilterStatus(filterStatus === 'out' ? 'all' : 'out')}
-          className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between cursor-pointer transition active:scale-95 ${
-            filterStatus === 'out'
-              ? 'bg-chili/10 border-chili ring-2 ring-chili'
-              : 'liquid-glass border-red-300/60 hover:border-red-400'
-          }`}
-        >
-          <div className="flex items-center justify-between text-chili text-xs font-bold">
-            <span>{lang === 'th' ? 'หมดสต็อก (Sold Out)' : 'Sold Out'}</span>
-            <XCircle className="h-4 w-4 text-chili" />
-          </div>
-          <div className="mt-2 font-display italic font-bold text-2xl text-chili">
-            {outOfStockCount}
-          </div>
-          <span className="text-[11px] text-chili/80 mt-0.5">
-            {lang === 'th' ? 'ต้องเริ่มต้มสดใหม่' : 'Requires boiling'}
-          </span>
-        </div>
-      </div>
-
-      {/* Quick Bulk Batch Boiler Actions */}
-      <div className="p-4 rounded-3xl bg-gradient-to-r from-forest via-forest to-forest-dark text-cream shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-2xl bg-honey text-forest flex items-center justify-center shrink-0">
-            <Zap className="h-5 w-5" />
-          </div>
-          <div>
-            <h4 className="font-display italic font-bold text-sm sm:text-base leading-tight">
-              {lang === 'th' ? 'เติมสต็อกหม้อต้มด่วน (One-Click Restock)' : 'One-Click Batch Restock'}
-            </h4>
-            <p className="text-xs text-cream/70 font-thai mt-0.5">
-              {lang === 'th'
-                ? 'เพิ่มสต็อกอัตโนมัติเมื่อต้มน้ำเต้าหู้หม้อเช้า หรือรอบเย็น'
-                : 'Instantly add freshly boiled quantities across items'}
-            </p>
+      {/* Header Banner & Primary Sub-Tab Switcher */}
+      <div className="p-4 sm:p-5 rounded-3xl liquid-glass border border-white/80 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="h-10 w-10 rounded-2xl bg-forest text-honey flex items-center justify-center shrink-0 shadow-xs">
+              <Boxes className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="font-display italic font-bold text-forest text-xl sm:text-2xl leading-none">
+                {lang === 'th' ? 'ระบบคลังสต็อก & วัตถุดิบวันใจ' : 'Wanchai Inventory & Stock Control'}
+              </h2>
+              <p className="text-xs text-ink-muted mt-1">
+                {lang === 'th'
+                  ? 'ตรวจสอบระดับวัตถุดิบและแจ้งเตือนไปยังเครื่องคิดเงิน POS แบบเรียลไทม์'
+                  : 'Track raw ingredient levels and trigger live low-stock alerts on POS register'}
+              </p>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        {/* Sub-Tab Navigation Toggle */}
+        <div className="inline-flex rounded-full bg-forest/10 p-1 gap-1 shrink-0">
           <button
             type="button"
-            disabled={loading}
-            onClick={() => bulkRestockCategory('drinks', 30)}
-            className="h-9 px-3.5 rounded-full bg-honey text-forest font-bold text-xs flex items-center gap-1.5 shadow hover:bg-honey-dark transition active:scale-95"
+            onClick={() => {
+              triggerHaptic('tap');
+              setSubTab('ingredients');
+            }}
+            className={`h-9 px-4 rounded-full text-xs font-bold flex items-center gap-2 transition ${
+              subTab === 'ingredients'
+                ? 'bg-forest text-cream shadow-xs'
+                : 'text-forest hover:bg-forest/10'
+            }`}
           >
-            <Plus className="h-3.5 w-3.5" />
-            <span>{lang === 'th' ? 'ต้มน้ำเต้าหู้เช้า (+30 ทุกเมนู)' : 'Morning Batch (+30 Drinks)'}</span>
-          </button>
-
-          <button
-            type="button"
-            disabled={loading}
-            onClick={() => bulkRestockCategory('snacks', 25)}
-            className="h-9 px-3.5 rounded-full bg-white/20 hover:bg-white/30 text-cream font-bold text-xs flex items-center gap-1.5 transition active:scale-95"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>{lang === 'th' ? 'ทอดปาท่องโก๋ (+25 ชิ้น)' : 'Restock Snacks (+25)'}</span>
+            <Wheat className="h-3.5 w-3.5 text-honey" />
+            <span>{lang === 'th' ? 'วัตถุดิบ & บรรจุภัณฑ์' : 'Ingredient Levels'}</span>
+            {lowStockIngredients.length > 0 && (
+              <span className="h-4.5 min-w-4.5 px-1.5 rounded-full bg-terracotta text-cream text-[10px] font-black animate-pulse">
+                {lowStockIngredients.length}
+              </span>
+            )}
           </button>
 
           <button
             type="button"
             onClick={() => {
-              triggerHaptic('medium');
-              setIsBatchModalOpen(true);
+              triggerHaptic('tap');
+              setSubTab('products');
             }}
-            className="h-9 px-3.5 rounded-full bg-forest-dark border border-honey/50 hover:border-honey text-cream font-bold text-xs flex items-center gap-1.5 transition active:scale-95 shadow-sm"
+            className={`h-9 px-4 rounded-full text-xs font-bold flex items-center gap-2 transition ${
+              subTab === 'products'
+                ? 'bg-forest text-cream shadow-xs'
+                : 'text-forest hover:bg-forest/10'
+            }`}
           >
-            <ClipboardPaste className="h-3.5 w-3.5 text-honey" />
-            <span>{lang === 'th' ? 'วางข้อมูลสต็อกเป็นชุด (Batch Paste)' : 'Batch Paste Import'}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={loadProducts}
-            title={lang === 'th' ? 'รีเฟรชสต็อก' : 'Refresh'}
-            className="h-9 w-9 rounded-full bg-white/10 hover:bg-white/20 text-cream flex items-center justify-center transition active:scale-95"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            <Package className="h-3.5 w-3.5" />
+            <span>{lang === 'th' ? 'สินค้าสำเร็จรูปหน้าร้าน' : 'Finished Products'}</span>
           </button>
         </div>
       </div>
 
-      {/* Filter & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative flex-1">
-          <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={
-              lang === 'th'
-                ? 'ค้นหาสินค้าเพื่อจัดการสต็อก...'
-                : 'Search inventory by name...'
-            }
-            className="w-full h-10 rounded-full liquid-glass border border-white/60 pl-9 pr-4 text-xs focus:outline-none focus:border-forest"
-          />
-        </div>
+      {/* ============================================================== */}
+      {/* SUB-TAB 1: INGREDIENT LEVELS & LOW-STOCK POS NOTIFICATIONS      */}
+      {/* ============================================================== */}
+      {subTab === 'ingredients' && (
+        <div className="space-y-6">
+          {/* Overview Metric Cards for Ingredients */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Total Tracked Ingredients */}
+            <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-ink-muted text-xs">
+                <span>{lang === 'th' ? 'วัตถุดิบทั้งหมด' : 'Total Ingredients'}</span>
+                <Wheat className="h-4 w-4 text-forest" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-forest">
+                {ingredients.length}
+              </div>
+              <span className="text-[11px] text-ink-muted mt-0.5">
+                {lang === 'th' ? 'รายการวัตถุดิบ & แพ็กเกจ' : 'Tracked supplies'}
+              </span>
+            </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-black/5 p-1 rounded-full border border-forest/10 overflow-x-auto no-scrollbar shrink-0">
-          {(
-            [
-              ['all', lang === 'th' ? 'ทั้งหมด' : 'All'],
-              ['drinks', lang === 'th' ? 'เครื่องดื่ม' : 'Drinks'],
-              ['snacks', lang === 'th' ? 'ของว่าง' : 'Snacks'],
-            ] as const
-          ).map(([c, label]) => (
-            <button
-              key={c}
-              type="button"
+            {/* Low-Stock Alert (Triggers POS warning) */}
+            <div
               onClick={() => {
                 triggerHaptic('tap');
-                setFilterCategory(c);
+                setIngredientFilter(ingredientFilter === 'low' ? 'all' : 'low');
               }}
-              className={`h-8 px-3 rounded-full text-xs font-bold transition active:scale-95 ${
-                filterCategory === c
-                  ? 'bg-forest text-cream shadow-xs'
-                  : 'text-forest hover:bg-forest/10'
+              className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between cursor-pointer transition active:scale-95 ${
+                lowStockIngredients.length > 0
+                  ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-400/50'
+                  : 'liquid-glass border-white/60'
               }`}
             >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Inventory Products Table / List */}
-      <div className="rounded-3xl liquid-glass border border-white/60 shadow-sm overflow-hidden">
-        <div className="divide-y divide-forest/10">
-          {filtered.length === 0 ? (
-            <div className="p-8 text-center text-ink-muted text-sm">
-              {lang === 'th' ? 'ไม่พบสินค้าตามเงื่อนไขที่เลือก' : 'No inventory items match filter.'}
+              <div className="flex items-center justify-between text-amber-900 text-xs font-bold">
+                <span>{lang === 'th' ? 'ใกล้หมด (แจ้งเตือน POS)' : 'Low Stock (Alerts POS)'}</span>
+                <AlertTriangle className="h-4 w-4 text-amber-600 animate-pulse" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-amber-900">
+                {lowStockIngredients.length}
+              </div>
+              <span className="text-[11px] text-amber-800 font-semibold mt-0.5">
+                {lang === 'th' ? 'ถึงเกณฑ์สั่งซื้อเพิ่มทันที' : 'Needs reordering'}
+              </span>
             </div>
-          ) : (
-            filtered.map((item) => {
-              const currentStock = Number(item.stock) || 0;
-              const isOut = currentStock <= 0 || item.sold_out;
-              const isLow = currentStock > 0 && currentStock <= 10;
 
-              return (
-                <div
-                  key={item.id}
-                  className="p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-white/40 transition"
+            {/* Critical / Out of Stock */}
+            <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-ink-muted text-xs">
+                <span>{lang === 'th' ? 'วิกฤต / หมด' : 'Critical Low'}</span>
+                <TrendingDown className="h-4 w-4 text-chili" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-chili">
+                {criticalIngredients.length}
+              </div>
+              <span className="text-[11px] text-chili font-semibold mt-0.5">
+                {lang === 'th' ? 'สต็อกเหลือน้อยกว่า 50%' : '< 50% threshold'}
+              </span>
+            </div>
+
+            {/* In-Stock Healthy */}
+            <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-ink-muted text-xs">
+                <span>{lang === 'th' ? 'สต็อกปกติ' : 'Healthy Stock'}</span>
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-forest">
+                {ingredients.length - lowStockIngredients.length}
+              </div>
+              <span className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                {lang === 'th' ? 'พร้อมใช้งานหน้าร้าน' : 'Ready for service'}
+              </span>
+            </div>
+          </div>
+
+          {/* POS Live Alert Notice Box */}
+          {lowStockIngredients.length > 0 && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-400 text-amber-950 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 rounded-xl bg-amber-500 text-cream flex items-center justify-center shrink-0">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="font-bold text-sm">
+                    {lang === 'th'
+                      ? `กำลังแจ้งเตือนสต็อกต่ำไปยังเครื่องคิดเงิน POS (${lowStockIngredients.length} รายการ)`
+                      : `Live Low-Stock Alert Active on POS Terminal (${lowStockIngredients.length} items)`}
+                  </div>
+                  <div className="text-xs text-amber-900/80 mt-0.5">
+                    {lowStockIngredients.map((i) => `${i.name_th} (${i.current_stock} ${i.unit})`).join(' • ')}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('tap');
+                  setIngredientFilter('low');
+                }}
+                className="h-8 px-3 rounded-full bg-amber-900 text-cream text-xs font-bold hover:bg-amber-950 transition active:scale-95 shrink-0"
+              >
+                {lang === 'th' ? 'กรองเฉพาะรายการนี้' : 'Filter Low Items'}
+              </button>
+            </div>
+          )}
+
+          {/* Controls: Search, Filter Tabs, Add Ingredient */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            {/* Search */}
+            <div className="relative flex-1">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+              <input
+                type="text"
+                value={ingredientSearch}
+                onChange={(e) => setIngredientSearch(e.target.value)}
+                placeholder={
+                  lang === 'th'
+                    ? 'ค้นหาวัตถุดิบ เช่น ถั่วเหลือง, นมวัวสด, ถุงร้อน...'
+                    : 'Search ingredients: Soybeans, milk, cups...'
+                }
+                className="w-full h-11 pl-9 pr-4 rounded-full liquid-glass border border-white/60 text-forest text-xs sm:text-sm focus:outline-none focus:border-forest"
+              />
+            </div>
+
+            {/* Add Ingredient Button */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setIsAddIngredientOpen(true);
+              }}
+              className="h-11 px-4.5 rounded-full bg-forest text-cream font-bold text-xs flex items-center justify-center gap-2 hover:bg-forest-dark transition active:scale-95 shadow-sm shrink-0"
+            >
+              <Plus className="h-4 w-4 text-honey" />
+              <span>{lang === 'th' ? 'เพิ่มวัตถุดิบใหม่' : 'Add Ingredient'}</span>
+            </button>
+          </div>
+
+          {/* Smooth Scrollable Category Filter Menu */}
+          <SmoothScrollMenu arrowTheme="forest">
+            <div className="inline-flex gap-2 py-1">
+              {[
+                { id: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
+                { id: 'low', labelTh: `⚠️ ใกล้หมด (${lowStockIngredients.length})`, labelEn: `⚠️ Low (${lowStockIngredients.length})` },
+                { id: 'raw_materials', labelTh: '🌱 วัตถุดิบหลัก', labelEn: '🌱 Raw Materials' },
+                { id: 'dairy_liquids', labelTh: '🥛 นมสด & ของเหลว', labelEn: '🥛 Dairy & Liquids' },
+                { id: 'dry_goods', labelTh: '🌾 แป้ง & น้ำตาล', labelEn: '🌾 Dry Goods' },
+                { id: 'packaging', labelTh: '🛍️ บรรจุภัณฑ์', labelEn: '🛍️ Packaging' },
+              ].map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic('tap');
+                    setIngredientFilter(c.id as any);
+                  }}
+                  className={`h-9 px-4 rounded-full text-xs font-bold transition active:scale-95 shrink-0 flex items-center gap-1.5 ${
+                    ingredientFilter === c.id
+                      ? 'bg-forest text-cream shadow-xs'
+                      : 'liquid-glass border border-white/60 text-forest hover:bg-forest/10'
+                  }`}
                 >
-                  {/* Left: Product Info */}
-                  <div className="flex items-center gap-3 min-w-0">
-                    <img
-                      src={item.image_url}
-                      alt={item.name_en}
-                      className="h-14 w-14 rounded-2xl object-cover shrink-0 border border-forest/15 shadow-xs"
-                      onError={(e) => {
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                    <div className="min-w-0">
+                  {lang === 'th' ? c.labelTh : c.labelEn}
+                </button>
+              ))}
+            </div>
+          </SmoothScrollMenu>
+
+          {/* Ingredient Items List */}
+          <div className="space-y-3">
+            {filteredIngredients.length === 0 ? (
+              <div className="p-8 rounded-3xl liquid-glass border border-white/60 text-center">
+                <Wheat className="h-8 w-8 text-forest/40 mx-auto mb-2" />
+                <p className="text-forest font-bold text-sm">
+                  {lang === 'th' ? 'ไม่พบรายการวัตถุดิบที่ตรงกับการค้นหา' : 'No ingredients matched'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIngredientFilter('all');
+                    setIngredientSearch('');
+                  }}
+                  className="mt-3 text-xs font-bold text-terracotta hover:underline"
+                >
+                  {lang === 'th' ? 'ล้างตัวกรองทั้งหมด' : 'Reset filters'}
+                </button>
+              </div>
+            ) : (
+              filteredIngredients.map((item) => {
+                const isLow = item.current_stock <= item.min_threshold;
+                const isCritical =
+                  item.current_stock <= item.min_threshold / 2 || item.current_stock <= 0;
+                const ratio = Math.min(
+                  100,
+                  Math.round((item.current_stock / (item.min_threshold * 2)) * 100)
+                );
+
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-4 rounded-2xl border transition shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 ${
+                      isCritical
+                        ? 'bg-red-500/10 border-red-300'
+                        : isLow
+                        ? 'bg-amber-500/10 border-amber-300'
+                        : 'liquid-glass border-white/70'
+                    }`}
+                  >
+                    {/* Item Details */}
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-thai font-bold text-sm text-forest truncate">
+                        <span className="font-display italic font-bold text-forest text-base sm:text-lg">
                           {lang === 'th' ? item.name_th : item.name_en}
                         </span>
-                        <span className="text-xs text-ink-muted font-mono">
-                          {baht(item.price)}
+
+                        {/* Status Badge */}
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase font-mono ${
+                            isCritical
+                              ? 'bg-chili text-cream animate-pulse'
+                              : isLow
+                              ? 'bg-amber-500 text-cream'
+                              : 'bg-emerald-600 text-cream'
+                          }`}
+                        >
+                          {isCritical
+                            ? lang === 'th'
+                              ? 'วิกฤต (Critical)'
+                              : 'Critical'
+                            : isLow
+                            ? lang === 'th'
+                              ? 'ใกล้หมด (Low)'
+                              : 'Low'
+                            : lang === 'th'
+                            ? 'ปกติ (Normal)'
+                            : 'Healthy'}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider bg-forest/10 text-forest">
-                          {item.category}
+
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-forest/10 text-forest font-semibold">
+                          {item.category === 'raw_materials'
+                            ? '🌱 วัตถุดิบหลัก'
+                            : item.category === 'dairy_liquids'
+                            ? '🥛 นมสด & ของเหลว'
+                            : item.category === 'dry_goods'
+                            ? '🌾 แป้ง & น้ำตาล'
+                            : '🛍️ บรรจุภัณฑ์'}
                         </span>
                       </div>
 
-                      {/* Status Badges */}
-                      <div className="flex items-center gap-2 mt-1">
-                        {isOut ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-chili bg-chili/10 px-2 py-0.5 rounded-full">
-                            <XCircle className="h-3 w-3" />
-                            {lang === 'th' ? 'สินค้าหมด (Sold Out)' : 'Sold Out'}
-                          </span>
-                        ) : isLow ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full animate-pulse">
-                            <AlertTriangle className="h-3 w-3 text-amber-600" />
-                            {lang === 'th' ? 'สต็อกใกล้หมด' : 'Low Stock'}
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded-full">
-                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                            {lang === 'th' ? 'มีจำหน่าย' : 'Available'}
-                          </span>
-                        )}
+                      {item.notes && (
+                        <p className="text-xs text-ink-muted mt-1 truncate">
+                          {item.notes}
+                        </p>
+                      )}
 
-                        {/* Batch boil time preview */}
-                        {item.next_batch_time && (
-                          <span className="inline-flex items-center gap-1 text-[11px] text-ink-muted">
-                            <Clock className="h-3 w-3" />
-                            <span>{item.next_batch_time}</span>
+                      {/* Stock Level Progress Bar */}
+                      <div className="mt-2.5 max-w-md">
+                        <div className="flex items-center justify-between text-[11px] mb-1">
+                          <span className="text-ink-muted">
+                            {lang === 'th' ? 'คงเหลือ:' : 'Stock:'}{' '}
+                            <strong className="text-forest text-xs font-mono">
+                              {item.current_stock}
+                            </strong>{' '}
+                            {item.unit}
                           </span>
-                        )}
+                          <span className="text-ink-muted font-mono">
+                            {lang === 'th' ? 'เกณฑ์เตือน POS:' : 'Alert Min:'}{' '}
+                            <strong>{item.min_threshold}</strong> {item.unit}
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-forest/10 overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-300 rounded-full ${
+                              isCritical
+                                ? 'bg-chili'
+                                : isLow
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-600'
+                            }`}
+                            style={{ width: `${Math.max(5, ratio)}%` }}
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right: Quantity Adjusters & Batch Time Input */}
-                  <div className="flex items-center justify-between sm:justify-end gap-3 flex-wrap">
-                    {/* Batch Boil Time Selector */}
-                    <div className="flex items-center gap-1.5 bg-cream/80 border border-forest/15 rounded-xl px-2 py-1">
-                      <Clock className="h-3.5 w-3.5 text-forest/70 shrink-0" />
-                      <input
-                        type="text"
-                        placeholder="06:30"
-                        defaultValue={item.next_batch_time || ''}
-                        onBlur={(e) => {
-                          if (e.target.value !== item.next_batch_time) {
-                            updateBatchTime(item.id, e.target.value);
-                          }
-                        }}
-                        title={lang === 'th' ? 'เวลาต้มรอบถัดไป' : 'Next Batch Time'}
-                        className="w-16 bg-transparent text-xs font-mono font-bold text-forest focus:outline-none"
-                      />
-                    </div>
-
-                    {/* Stock Counter with + / - Buttons */}
-                    <div className="flex items-center gap-1.5 bg-white rounded-2xl p-1 border border-forest/20 shadow-xs">
+                    {/* Stock Steppers and Quick Action Controls */}
+                    <div className="flex items-center gap-2 self-start md:self-center shrink-0">
                       {/* Step -10 */}
                       <button
                         type="button"
-                        onClick={() => updateProductStock(item.id, currentStock - 10)}
+                        onClick={() => handleAdjustIngredient(item.id, -10)}
                         title="-10"
-                        className="h-8 w-8 rounded-xl bg-forest/5 hover:bg-forest/15 text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                        className="h-9 w-9 rounded-xl bg-forest/5 hover:bg-forest/15 text-forest font-bold text-xs flex items-center justify-center transition active:scale-90"
                       >
                         -10
                       </button>
@@ -455,31 +643,34 @@ export default function InventoryManager() {
                       {/* Step -1 */}
                       <button
                         type="button"
-                        onClick={() => updateProductStock(item.id, currentStock - 1)}
+                        onClick={() => handleAdjustIngredient(item.id, -1)}
                         title="-1"
-                        className="h-8 w-8 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                        className="h-9 w-9 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-90"
                       >
                         <Minus className="h-3.5 w-3.5" />
                       </button>
 
-                      {/* Direct Numeric Input */}
-                      <input
-                        type="number"
-                        min="0"
-                        value={currentStock}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value) || 0;
-                          updateProductStock(item.id, val);
-                        }}
-                        className="w-14 text-center font-mono font-bold text-sm text-forest focus:outline-none"
-                      />
+                      {/* Direct Numeric Input with Unit */}
+                      <div className="flex items-center gap-1 bg-white/90 border border-forest/20 rounded-xl px-2 py-1 shadow-2xs">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          value={item.current_stock}
+                          onChange={(e) =>
+                            handleSetIngredientDirect(item.id, parseFloat(e.target.value) || 0)
+                          }
+                          className="w-14 text-center font-mono font-bold text-sm text-forest focus:outline-none"
+                        />
+                        <span className="text-[10px] text-ink-muted font-mono">{item.unit}</span>
+                      </div>
 
                       {/* Step +1 */}
                       <button
                         type="button"
-                        onClick={() => updateProductStock(item.id, currentStock + 1)}
+                        onClick={() => handleAdjustIngredient(item.id, 1)}
                         title="+1"
-                        className="h-8 w-8 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                        className="h-9 w-9 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-90"
                       >
                         <Plus className="h-3.5 w-3.5" />
                       </button>
@@ -487,15 +678,209 @@ export default function InventoryManager() {
                       {/* Step +10 */}
                       <button
                         type="button"
-                        onClick={() => updateProductStock(item.id, currentStock + 10)}
+                        onClick={() => handleAdjustIngredient(item.id, 10)}
                         title="+10"
-                        className="h-8 w-8 rounded-xl bg-honey/30 hover:bg-honey text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                        className="h-9 w-9 rounded-xl bg-honey/30 hover:bg-honey text-forest font-bold text-xs flex items-center justify-center transition active:scale-90"
                       >
                         +10
                       </button>
-                    </div>
 
-                    {/* Sold Out Toggle Button */}
+                      {/* Edit Threshold & Config Button */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('tap');
+                          setEditingIngredient(item);
+                        }}
+                        title={lang === 'th' ? 'แก้ไขเกณฑ์เตือนสต็อก' : 'Edit Alert Threshold'}
+                        className="h-9 w-9 rounded-xl liquid-pill text-forest hover:bg-forest/10 flex items-center justify-center transition active:scale-90 border border-forest/20 ml-1"
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* SUB-TAB 2: FINISHED PRODUCTS & BATCH INVENTORY MANAGER         */}
+      {/* ============================================================== */}
+      {subTab === 'products' && (
+        <div className="space-y-6">
+          {/* Overview Metric Cards for Products */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-ink-muted text-xs">
+                <span>{lang === 'th' ? 'รายการสินค้า' : 'Total Items'}</span>
+                <Boxes className="h-4 w-4 text-forest" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-forest">
+                {totalItems}
+              </div>
+              <span className="text-[11px] text-ink-muted mt-0.5">
+                {lang === 'th' ? 'ในฐานข้อมูล' : 'In catalog'}
+              </span>
+            </div>
+
+            <div className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col justify-between">
+              <div className="flex items-center justify-between text-ink-muted text-xs">
+                <span>{lang === 'th' ? 'จำนวนคงเหลือ' : 'Stock Units'}</span>
+                <Package className="h-4 w-4 text-honey" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-forest">
+                {totalUnits}
+              </div>
+              <span className="text-[11px] text-emerald-700 font-semibold mt-0.5">
+                {lang === 'th' ? 'ถุง / ชิ้น พร้อมขาย' : 'Units available'}
+              </span>
+            </div>
+
+            <div
+              onClick={() => setFilterStatus(filterStatus === 'low' ? 'all' : 'low')}
+              className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between cursor-pointer transition active:scale-95 ${
+                filterStatus === 'low'
+                  ? 'bg-amber-100/90 border-amber-400 ring-2 ring-amber-400'
+                  : 'liquid-glass border-amber-300/60 hover:border-amber-400'
+              }`}
+            >
+              <div className="flex items-center justify-between text-amber-800 text-xs font-bold">
+                <span>{lang === 'th' ? 'สต็อกใกล้หมด' : 'Low Stock'}</span>
+                <AlertTriangle className="h-4 w-4 text-amber-600 animate-pulse" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-amber-800">
+                {lowStockProductsCount}
+              </div>
+              <span className="text-[11px] text-amber-700 mt-0.5">
+                {lang === 'th' ? 'เหลือน้อยกว่า 10 ชิ้น' : '< 10 units left'}
+              </span>
+            </div>
+
+            <div
+              onClick={() => setFilterStatus(filterStatus === 'out' ? 'all' : 'out')}
+              className={`p-4 rounded-2xl border shadow-xs flex flex-col justify-between cursor-pointer transition active:scale-95 ${
+                filterStatus === 'out'
+                  ? 'bg-chili/10 border-chili ring-2 ring-chili'
+                  : 'liquid-glass border-red-300/60 hover:border-red-400'
+              }`}
+            >
+              <div className="flex items-center justify-between text-chili text-xs font-bold">
+                <span>{lang === 'th' ? 'สินค้าหมด' : 'Out of Stock'}</span>
+                <XCircle className="h-4 w-4" />
+              </div>
+              <div className="mt-2 font-display italic font-bold text-2xl text-chili">
+                {outOfStockProductsCount}
+              </div>
+              <span className="text-[11px] text-chili mt-0.5">
+                {lang === 'th' ? 'ต้องเริ่มต้มหม้อใหม่' : 'Needs boiling'}
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Bulk Restock & Batch Paste Actions */}
+          <div className="p-4 rounded-3xl liquid-glass border border-white/60 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Zap className="h-4 w-4 text-honey" />
+              <span className="text-xs font-bold text-forest uppercase tracking-wider">
+                {lang === 'th' ? 'เติมสต็อกด่วนตามหมวดหมู่:' : 'Quick Bulk Restock:'}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Batch Update via Paste Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setIsBatchModalOpen(true);
+                }}
+                className="h-9 px-3.5 rounded-full bg-honey hover:bg-honey-dark text-forest font-bold text-xs flex items-center gap-1.5 shadow-xs transition active:scale-95"
+              >
+                <ClipboardPaste className="h-4 w-4" />
+                <span>{lang === 'th' ? 'วางรายการอัปเดตสต็อก (Batch Paste)' : 'Paste List Batch Update'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setProducts((prev) =>
+                    prev.map((p) =>
+                      p.category === 'drinks' ? { ...p, stock: (p.stock || 0) + 20, sold_out: false } : p
+                    )
+                  );
+                }}
+                className="h-9 px-3.5 rounded-full bg-forest text-cream font-bold text-xs flex items-center gap-1.5 shadow-xs hover:bg-forest-dark transition active:scale-95"
+              >
+                <Plus className="h-3.5 w-3.5" />
+                <span>{lang === 'th' ? 'เครื่องดื่ม +20 ถุง' : 'Drinks +20 Bags'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={loadProducts}
+                className="h-9 w-9 rounded-full bg-white/80 border border-forest/20 text-forest flex items-center justify-center hover:bg-forest/10 transition active:scale-95"
+                title="Reload"
+              >
+                <RefreshCw className={`h-4 w-4 ${loadingProducts ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+          </div>
+
+          {/* Product Items List */}
+          <div className="space-y-3">
+            {filteredProducts.map((item) => {
+              const currentStock = Number(item.stock) || 0;
+              return (
+                <div
+                  key={item.id}
+                  className="p-4 rounded-2xl liquid-glass border border-white/60 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="font-display italic font-bold text-forest text-base sm:text-lg">
+                        {lang === 'th' ? item.name_th : item.name_en}
+                      </span>
+                      <span className="text-xs text-ink-muted">· {baht(item.price)}</span>
+                      {item.sold_out && (
+                        <span className="px-2 py-0.5 rounded-full bg-chili text-cream text-[10px] font-bold">
+                          {lang === 'th' ? 'หมด' : 'Sold Out'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => updateProductStock(item.id, currentStock - 1)}
+                      className="h-8 w-8 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+
+                    <input
+                      type="number"
+                      min="0"
+                      value={currentStock}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        updateProductStock(item.id, val);
+                      }}
+                      className="w-14 text-center font-mono font-bold text-sm text-forest focus:outline-none"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => updateProductStock(item.id, currentStock + 1)}
+                      className="h-8 w-8 rounded-xl bg-forest/10 hover:bg-forest/20 text-forest font-bold text-xs flex items-center justify-center transition active:scale-95"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+
                     <button
                       type="button"
                       onClick={() => updateProductStock(item.id, currentStock, !item.sold_out)}
@@ -505,15 +890,285 @@ export default function InventoryManager() {
                           : 'bg-emerald-700 text-cream hover:bg-emerald-800'
                       }`}
                     >
-                      <span>{item.sold_out ? (lang === 'th' ? 'หมด' : 'Sold Out') : (lang === 'th' ? 'มีของ' : 'In Stock')}</span>
+                      <span>
+                        {item.sold_out
+                          ? lang === 'th'
+                            ? 'หมด'
+                            : 'Sold Out'
+                          : lang === 'th'
+                          ? 'มีของ'
+                          : 'In Stock'}
+                      </span>
                     </button>
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: EDIT INGREDIENT THRESHOLD & ALERT SETTINGS              */}
+      {/* ============================================================== */}
+      {editingIngredient && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-3xl bg-cream border border-forest/20 shadow-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display italic font-bold text-forest text-lg">
+                {lang === 'th' ? 'ตั้งค่าเกณฑ์แจ้งเตือนสต็อก' : 'Configure Alert Threshold'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingIngredient(null)}
+                className="h-8 w-8 rounded-full bg-forest/10 flex items-center justify-center text-forest"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'ชื่อวัตถุดิบ (ภาษาไทย)' : 'Ingredient Name (TH)'}
+                </label>
+                <input
+                  type="text"
+                  value={editingIngredient.name_th}
+                  onChange={(e) =>
+                    setEditingIngredient({ ...editingIngredient, name_th: e.target.value })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'ชื่อภาษาอังกฤษ' : 'English Name'}
+                </label>
+                <input
+                  type="text"
+                  value={editingIngredient.name_en}
+                  onChange={(e) =>
+                    setEditingIngredient({ ...editingIngredient, name_en: e.target.value })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-amber-800">
+                    {lang === 'th' ? 'เกณฑ์เตือน POS (Min)' : 'POS Alert Threshold'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={editingIngredient.min_threshold}
+                    onChange={(e) =>
+                      setEditingIngredient({
+                        ...editingIngredient,
+                        min_threshold: parseFloat(e.target.value) || 0,
+                      })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-amber-50 text-sm font-mono font-bold text-amber-950 mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-forest">
+                    {lang === 'th' ? 'หน่วยนับ' : 'Unit'}
+                  </label>
+                  <input
+                    type="text"
+                    value={editingIngredient.unit}
+                    onChange={(e) =>
+                      setEditingIngredient({ ...editingIngredient, unit: e.target.value })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'แหล่งที่มา / บันทึกย่อ' : 'Supplier / Origin Notes'}
+                </label>
+                <input
+                  type="text"
+                  value={editingIngredient.notes || ''}
+                  onChange={(e) =>
+                    setEditingIngredient({ ...editingIngredient, notes: e.target.value })
+                  }
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingIngredient(null)}
+                className="h-10 px-4 rounded-full text-xs font-bold text-ink-muted hover:bg-forest/10 transition"
+              >
+                {lang === 'th' ? 'ยกเลิก' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveIngredientEdit}
+                className="h-10 px-5 rounded-full bg-forest text-cream font-bold text-xs hover:bg-forest-dark transition active:scale-95 shadow-sm"
+              >
+                {lang === 'th' ? 'บันทึกเกณฑ์' : 'Save Threshold'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: ADD NEW INGREDIENT                                      */}
+      {/* ============================================================== */}
+      {isAddIngredientOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-3xl bg-cream border border-forest/20 shadow-xl p-5 sm:p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="font-display italic font-bold text-forest text-lg flex items-center gap-2">
+                <Wheat className="h-5 w-5 text-honey" />
+                <span>{lang === 'th' ? 'เพิ่มวัตถุดิบ & บรรจุภัณฑ์ใหม่' : 'Add New Raw Supply'}</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAddIngredientOpen(false)}
+                className="h-8 w-8 rounded-full bg-forest/10 flex items-center justify-center text-forest"
+              >
+                <XCircle className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'ชื่อวัตถุดิบ (ภาษาไทย) *' : 'Name (TH) *'}
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น ถั่วดำคั่ว, นมอัลมอนด์สด"
+                  value={newIngForm.name_th}
+                  onChange={(e) => setNewIngForm({ ...newIngForm, name_th: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'ชื่อภาษาอังกฤษ' : 'Name (EN)'}
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Roasted Black Beans"
+                  value={newIngForm.name_en}
+                  onChange={(e) => setNewIngForm({ ...newIngForm, name_en: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'หมวดหมู่วัตถุดิบ' : 'Category'}
+                </label>
+                <select
+                  value={newIngForm.category}
+                  onChange={(e) => setNewIngForm({ ...newIngForm, category: e.target.value as any })}
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                >
+                  <option value="raw_materials">🌱 วัตถุดิบหลัก (Raw Materials)</option>
+                  <option value="dairy_liquids">🥛 นมสด & ของเหลว (Dairy & Liquids)</option>
+                  <option value="dry_goods">🌾 แป้ง & น้ำตาล (Dry Goods)</option>
+                  <option value="packaging">🛍️ บรรจุภัณฑ์ & แก้ว (Packaging)</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-forest">
+                    {lang === 'th' ? 'สต็อกตั้งต้น' : 'Current'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    value={newIngForm.current_stock}
+                    onChange={(e) =>
+                      setNewIngForm({ ...newIngForm, current_stock: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm font-mono mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-amber-800">
+                    {lang === 'th' ? 'เกณฑ์เตือน' : 'Alert Min'}
+                  </label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="1"
+                    value={newIngForm.min_threshold}
+                    onChange={(e) =>
+                      setNewIngForm({ ...newIngForm, min_threshold: parseFloat(e.target.value) || 0 })
+                    }
+                    className="w-full h-10 px-3 rounded-xl border border-amber-300 bg-amber-50 text-sm font-mono mt-1"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-forest">
+                    {lang === 'th' ? 'หน่วยนับ' : 'Unit'}
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="กก., ลิตร, ถุง"
+                    value={newIngForm.unit}
+                    onChange={(e) => setNewIngForm({ ...newIngForm, unit: e.target.value })}
+                    className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm mt-1"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-forest">
+                  {lang === 'th' ? 'แหล่งที่มา / บันทึกย่อ' : 'Origin / Notes'}
+                </label>
+                <input
+                  type="text"
+                  placeholder="เช่น สั่งตรงจากสวนอินทรีย์แม่แตง"
+                  value={newIngForm.notes}
+                  onChange={(e) => setNewIngForm({ ...newIngForm, notes: e.target.value })}
+                  className="w-full h-10 px-3 rounded-xl border border-forest/20 bg-white text-sm text-forest mt-1"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsAddIngredientOpen(false)}
+                className="h-10 px-4 rounded-full text-xs font-bold text-ink-muted hover:bg-forest/10 transition"
+              >
+                {lang === 'th' ? 'ยกเลิก' : 'Cancel'}
+              </button>
+              <button
+                type="button"
+                onClick={handleAddNewIngredient}
+                className="h-10 px-5 rounded-full bg-forest text-cream font-bold text-xs hover:bg-forest-dark transition active:scale-95 shadow-sm"
+              >
+                {lang === 'th' ? 'เพิ่มเข้าระบบ' : 'Add to Inventory'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Batch Inventory Paste & Import Modal */}
       <BatchInventoryUpdateModal

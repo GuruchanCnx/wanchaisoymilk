@@ -41,6 +41,7 @@ import AccessibilitySettingsMenu from './AccessibilitySettingsMenu';
 import AccessibilitySettings from './AccessibilitySettings';
 import NavAccessibilityMenu from './NavAccessibilityMenu';
 import CartDrawer from './CartDrawer';
+import SmoothScrollMenu from './SmoothScrollMenu';
 
 export default function Nav({
   scrollTargets,
@@ -299,6 +300,31 @@ export default function Nav({
             </button>
           </div>
         </div>
+
+        {/* Easy Scroll Menu Bar: Frictionless navigation with chevrons & edge gradient masks */}
+        {scrollTargets && scrollTargets.length > 0 && (
+          <div className="mt-1.5 w-full">
+            <div className="rounded-full liquid-glass border border-white/70 shadow-xs py-1 px-1.5 backdrop-blur-md">
+              <SmoothScrollMenu arrowTheme="forest" showArrows={true}>
+                <div className="flex items-center gap-1.5 py-0.5">
+                  {scrollTargets.map((s) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('tap');
+                        jump(s.id);
+                      }}
+                      className="h-8 px-3.5 rounded-full text-xs font-semibold text-forest bg-white/70 hover:bg-forest hover:text-cream border border-forest/15 whitespace-nowrap shrink-0 transition active:scale-95 shadow-2xs"
+                    >
+                      {lang === 'th' ? s.label_th : s.label_en}
+                    </button>
+                  ))}
+                </div>
+              </SmoothScrollMenu>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Ergonomic One-Hand Mobile Bottom Dock (Thumb Zone Navigation) */}

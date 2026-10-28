@@ -35,6 +35,7 @@ import CustomerReviews from '../components/CustomerReviews';
 import OrderHistory from '../components/OrderHistory';
 import { cacheGet, cacheSet } from '../lib/cache';
 import { triggerHaptic } from '../lib/haptics';
+import SmoothScrollMenu from '../components/SmoothScrollMenu';
 
 export default function Home() {
   const { t, lang } = useLang();
@@ -364,49 +365,53 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Quick Category Filter Pills */}
-            <div className="mt-3 flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
-              <span className="text-xs font-bold text-ink-muted uppercase tracking-wider shrink-0 flex items-center gap-1">
-                <Filter className="h-3 w-3 text-forest" />
-                <span className="hidden sm:inline">{lang === 'th' ? 'หมวดหมู่:' : 'Filter:'}</span>
-              </span>
-              {[
-                { id: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
-                { id: 'bestsellers', labelTh: '⭐ เมนูขายดี', labelEn: '⭐ Bestsellers' },
-                { id: 'drinks', labelTh: '🥛 เครื่องดื่ม', labelEn: '🥛 Drinks' },
-                { id: 'snacks', labelTh: '🥟 ของว่าง', labelEn: '🥟 Snacks' },
-              ].map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('tap');
-                    setSelectedCategory(cat.id as any);
-                  }}
-                  className={`h-9 px-4 rounded-full text-xs font-bold transition active:scale-95 shrink-0 flex items-center gap-1 ${
-                    selectedCategory === cat.id
-                      ? 'bg-forest text-cream shadow-sm ring-1 ring-forest'
-                      : 'bg-white/80 border border-forest/15 text-forest hover:bg-forest/10'
-                  }`}
-                >
-                  {lang === 'th' ? cat.labelTh : cat.labelEn}
-                </button>
-              ))}
+            {/* Quick Category Filter Pills with Smooth Momentum Scrolling */}
+            <div className="mt-3">
+              <SmoothScrollMenu arrowTheme="forest">
+                <div className="flex items-center gap-2 py-1 pr-2">
+                  <span className="text-xs font-bold text-ink-muted uppercase tracking-wider shrink-0 flex items-center gap-1 mr-1">
+                    <Filter className="h-3 w-3 text-forest" />
+                    <span className="hidden sm:inline">{lang === 'th' ? 'หมวดหมู่:' : 'Filter:'}</span>
+                  </span>
+                  {[
+                    { id: 'all', labelTh: 'ทั้งหมด', labelEn: 'All' },
+                    { id: 'bestsellers', labelTh: '⭐ เมนูขายดี', labelEn: '⭐ Bestsellers' },
+                    { id: 'drinks', labelTh: '🥛 เครื่องดื่ม', labelEn: '🥛 Drinks' },
+                    { id: 'snacks', labelTh: '🥟 ของว่าง', labelEn: '🥟 Snacks' },
+                  ].map((cat) => (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('tap');
+                        setSelectedCategory(cat.id as any);
+                      }}
+                      className={`h-9 px-4 rounded-full text-xs font-bold transition active:scale-95 shrink-0 flex items-center gap-1 ${
+                        selectedCategory === cat.id
+                          ? 'bg-forest text-cream shadow-sm ring-1 ring-forest'
+                          : 'bg-white/80 border border-forest/15 text-forest hover:bg-forest/10'
+                      }`}
+                    >
+                      {lang === 'th' ? cat.labelTh : cat.labelEn}
+                    </button>
+                  ))}
 
-              {isFilteringActive && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic('tap');
-                    setSearchQuery('');
-                    setSelectedCategory('all');
-                  }}
-                  className="h-9 px-3 rounded-full text-xs font-medium text-terracotta hover:bg-terracotta/10 transition shrink-0 ml-auto flex items-center gap-1"
-                >
-                  <X className="h-3 w-3" />
-                  <span>{lang === 'th' ? 'ล้างตัวกรอง' : 'Reset'}</span>
-                </button>
-              )}
+                  {isFilteringActive && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        triggerHaptic('tap');
+                        setSearchQuery('');
+                        setSelectedCategory('all');
+                      }}
+                      className="h-9 px-3 rounded-full text-xs font-medium text-terracotta hover:bg-terracotta/10 transition shrink-0 ml-auto flex items-center gap-1"
+                    >
+                      <X className="h-3 w-3" />
+                      <span>{lang === 'th' ? 'ล้างตัวกรอง' : 'Reset'}</span>
+                    </button>
+                  )}
+                </div>
+              </SmoothScrollMenu>
             </div>
           </div>
         </section>

@@ -24,6 +24,9 @@ import {
   Layers,
   Activity,
   Zap,
+  AlertTriangle,
+  X,
+  Wheat,
 } from 'lucide-react';
 import type { Order, Product, OrderItem } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -31,6 +34,12 @@ import { baht, shortId, timeAgo } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PosDialPad from '../components/PosDialPad';
 import PosQrScannerModal from '../components/PosQrScannerModal';
+import SmoothScrollMenu from '../components/SmoothScrollMenu';
+import {
+  loadIngredients,
+  getLowStockIngredients,
+  type IngredientItem,
+} from '../lib/ingredients';
 import { useFoldableSpanning } from '../hooks/useFoldableSpanning';
 import {
   applyQuickHapticPattern,
@@ -71,6 +80,12 @@ export default function POS() {
   const [receivedCash, setReceivedCash] = useState<number | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Ingredient Inventory & Low-Stock Alerts for POS
+  const [ingredients, setIngredients] = useState<IngredientItem[]>(() => loadIngredients());
+  const [showLowStockModal, setShowLowStockModal] = useState(false);
+  const [isLowStockBannerDismissed, setIsLowStockBannerDismissed] = useState(false);
+  const lowStockIngredients = getLowStockIngredients(ingredients);
 
   // Hook for foldable dual-screen devices
   const { isSpanned, wrapperRef } = useFoldableSpanning<HTMLElement>();
@@ -116,6 +131,35 @@ export default function POS() {
     const iv = setInterval(loadOrders, 5000);
     return () => clearInterval(iv);
   }, [loadOrders, loadProducts]);
+
+  // Sync Ingredient Inventory and alert POS on low stock
+  useEffect(() => {
+    const handleIngredientSync = () => {
+      const latest = loadIngredients();
+      const prevLowCount = getLowStockIngredients(ingredients).length;
+      const nextLowCount = getLowStockIngredients(latest).length;
+      setIngredients(latest);
+
+      if (nextLowCount > prevLowCount && nextLowCount > 0) {
+        playAlertCue();
+        triggerHaptic('warning');
+        showToast(
+          lang === 'th' ? '⚠️ แจ้งเตือน: วัตถุดิบใกล้หมด' : '⚠️ Alert: Ingredient Low-Stock',
+          lang === 'th' ? `พบวัตถุดิบถึงเกณฑ์สั่งซื้อ ${nextLowCount} รายการ` : `${nextLowCount} raw ingredients need reordering`,
+          'warning'
+        );
+      }
+    };
+
+    window.addEventListener('ingredient_inventory_updated', handleIngredientSync);
+    window.addEventListener('storage', handleIngredientSync);
+    const interval = setInterval(handleIngredientSync, 8000);
+    return () => {
+      window.removeEventListener('ingredient_inventory_updated', handleIngredientSync);
+      window.removeEventListener('storage', handleIngredientSync);
+      clearInterval(interval);
+    };
+  }, [ingredients, lang, showToast]);
 
   // Status transitions
   const update = async (id: number, patch: Partial<Order>) => {
@@ -335,6 +379,28 @@ export default function POS() {
 
           {/* Right: Quick Tools */}
           <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            {/* Low-Stock Ingredient Warning Badge */}
+            {lowStockIngredients.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('warning');
+                  setShowLowStockModal(true);
+                }}
+                className="h-8.5 sm:h-10 px-2 sm:px-3 rounded-full bg-amber-400 text-amber-950 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md animate-pulse active:scale-95 shrink-0"
+                title={
+                  lang === 'th'
+                    ? `⚠️ วัตถุดิบใกล้หมด ${lowStockIngredients.length} รายการ (แตะเพื่อดูรายละเอียด)`
+                    : `⚠️ ${lowStockIngredients.length} ingredients running low (Tap to inspect)`
+                }
+                aria-label="Low Stock Alert"
+              >
+                <AlertTriangle className="h-4 w-4 text-amber-950" />
+                <span className="font-mono font-black">{lowStockIngredients.length}</span>
+                <span className="hidden xl:inline">{lang === 'th' ? 'วัตถุดิบใกล้หมด' : 'Low Stock'}</span>
+              </button>
+            )}
+
             {/* Camera QR Code Scanner */}
             <button
               onClick={() => {
@@ -387,6 +453,53 @@ export default function POS() {
           </div>
         </div>
       </header>
+
+      {/* POS Real-Time Low-Stock Ingredient Warning Banner */}
+      {lowStockIngredients.length > 0 && !isLowStockBannerDismissed && (
+        <div className="bg-gradient-to-r from-amber-400 via-amber-300 to-amber-400 text-amber-950 px-3 sm:px-4 py-2 border-b-2 border-amber-500 font-bold text-xs flex flex-wrap items-center justify-between gap-2 shadow-md">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="h-6 w-6 rounded-full bg-amber-950 text-amber-300 flex items-center justify-center shrink-0">
+              <AlertTriangle className="h-3.5 w-3.5 animate-bounce" />
+            </div>
+            <span className="shrink-0 font-extrabold uppercase tracking-wide">
+              {lang === 'th' ? '⚠️ แจ้งเตือนวัตถุดิบใกล้หมด:' : '⚠️ Low Stock Alert:'}
+            </span>
+            <span className="font-medium truncate max-w-xs sm:max-w-md lg:max-w-xl">
+              {lowStockIngredients.map((i) => `${lang === 'th' ? i.name_th : i.name_en} (${i.current_stock}/${i.min_threshold} ${i.unit})`).join(' • ')}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('tap');
+                setShowLowStockModal(true);
+              }}
+              className="h-7 px-3 rounded-full bg-amber-950 text-amber-200 text-[11px] font-bold hover:bg-black transition active:scale-95 shadow-xs"
+            >
+              {lang === 'th' ? 'ดูรายการเตือน' : 'View Low Items'}
+            </button>
+            <Link
+              to="/admin"
+              className="h-7 px-3 rounded-full bg-forest text-cream text-[11px] font-bold hover:bg-forest-dark transition active:scale-95 shadow-xs"
+            >
+              {lang === 'th' ? 'เติมสต็อก (Admin)' : 'Restock in Admin'}
+            </Link>
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('tap');
+                setIsLowStockBannerDismissed(true);
+              }}
+              className="h-7 w-7 rounded-full bg-amber-950/10 hover:bg-amber-950/20 flex items-center justify-center text-amber-950"
+              title="Dismiss"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* POS Tactile Haptic Pattern Selection Strip */}
       <div className="bg-forest-dark/95 border-b border-cream/10 px-3 sm:px-4 py-1.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs">
@@ -445,30 +558,32 @@ export default function POS() {
                   />
                 </div>
 
-                <div className="flex items-center gap-1 bg-forest p-1 rounded-xl border border-cream/10 shrink-0">
-                  {(
-                    [
-                      ['all', lang === 'th' ? 'ทั้งหมด' : 'All'],
-                      ['drinks', lang === 'th' ? 'น้ำเต้าหู้' : 'Drinks'],
-                      ['snacks', lang === 'th' ? 'ขนม/ของว่าง' : 'Snacks'],
-                    ] as const
-                  ).map(([cat, label]) => (
-                    <button
-                      key={cat}
-                      type="button"
-                      onClick={() => {
-                        triggerHaptic('tap');
-                        setSelectedCategory(cat);
-                      }}
-                      className={`h-8 px-3 rounded-lg text-xs font-bold transition active:scale-95 ${
-                        selectedCategory === cat
-                          ? 'bg-honey text-forest shadow-xs'
-                          : 'text-cream/70 hover:text-cream'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className="shrink-0 max-w-full sm:max-w-xs">
+                  <SmoothScrollMenu arrowTheme="dark" className="gap-1 bg-forest p-1 rounded-xl border border-cream/10">
+                    {(
+                      [
+                        ['all', lang === 'th' ? 'ทั้งหมด' : 'All'],
+                        ['drinks', lang === 'th' ? '🥛 น้ำเต้าหู้ & นมสด' : '🥛 Drinks'],
+                        ['snacks', lang === 'th' ? '🥟 ปาท่องโก๋ & ขนม' : '🥟 Snacks'],
+                      ] as const
+                    ).map(([cat, label]) => (
+                      <button
+                        key={cat}
+                        type="button"
+                        onClick={() => {
+                          triggerHaptic('tap');
+                          setSelectedCategory(cat);
+                        }}
+                        className={`h-8 px-3 rounded-lg text-xs font-bold transition active:scale-95 whitespace-nowrap shrink-0 ${
+                          selectedCategory === cat
+                            ? 'bg-honey text-forest shadow-xs'
+                            : 'text-cream/70 hover:text-cream'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </SmoothScrollMenu>
                 </div>
               </div>
 
@@ -806,6 +921,109 @@ export default function POS() {
         onUpdateOrderStatus={update}
         lang={lang}
       />
+
+      {/* Low-Stock Ingredient Details Modal for POS */}
+      {showLowStockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-3xl bg-forest-dark border-2 border-amber-400/60 shadow-2xl p-5 sm:p-6 text-cream space-y-4">
+            <div className="flex items-center justify-between border-b border-cream/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-xl bg-amber-400 text-amber-950 flex items-center justify-center font-bold">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-display italic font-bold text-lg sm:text-xl text-honey">
+                    {lang === 'th' ? 'รายการวัตถุดิบใกล้หมด' : 'Low Stock Ingredients'}
+                  </h3>
+                  <p className="text-xs text-cream/70">
+                    {lang === 'th'
+                      ? `ตรวจพบ ${lowStockIngredients.length} รายการที่ต่ำกว่าเกณฑ์ความปลอดภัย`
+                      : `${lowStockIngredients.length} items below minimum safety threshold`}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowLowStockModal(false)}
+                className="h-8 w-8 rounded-full bg-cream/10 hover:bg-cream/20 flex items-center justify-center text-cream"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* List of items */}
+            <div className="space-y-2.5 max-h-[60vh] overflow-y-auto pr-1">
+              {lowStockIngredients.map((item) => {
+                const isCritical = item.current_stock <= item.min_threshold / 2 || item.current_stock <= 0;
+                return (
+                  <div
+                    key={item.id}
+                    className={`p-3.5 rounded-2xl border flex items-center justify-between gap-3 ${
+                      isCritical
+                        ? 'bg-chili/20 border-chili/50'
+                        : 'bg-amber-500/15 border-amber-400/40'
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-cream">
+                          {lang === 'th' ? item.name_th : item.name_en}
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono px-2 py-0.5 rounded-full font-bold uppercase ${
+                            isCritical ? 'bg-chili text-cream' : 'bg-amber-400 text-amber-950'
+                          }`}
+                        >
+                          {isCritical ? 'CRITICAL' : 'LOW'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-cream/70 mt-1">
+                        {lang === 'th' ? 'คงเหลือ:' : 'Current:'}{' '}
+                        <strong className="text-honey font-mono text-sm">{item.current_stock}</strong> {item.unit}
+                        {' · '}
+                        {lang === 'th' ? 'เกณฑ์แจ้งเตือน:' : 'Alert Min:'}{' '}
+                        <span className="font-mono">{item.min_threshold}</span> {item.unit}
+                      </div>
+                      {item.notes && <div className="text-[11px] text-cream/50 mt-0.5">{item.notes}</div>}
+                    </div>
+
+                    <Link
+                      to="/admin"
+                      onClick={() => setShowLowStockModal(false)}
+                      className="h-8 px-3 rounded-full bg-honey hover:bg-honey-dark text-forest font-bold text-xs flex items-center gap-1 shadow-xs transition active:scale-95 shrink-0"
+                    >
+                      <span>{lang === 'th' ? 'เติมของ' : 'Restock'}</span>
+                    </Link>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-cream/10">
+              <span className="text-xs text-cream/60">
+                {lang === 'th' ? 'อัปเดตแบบเรียลไทม์จากระบบคลังหลังร้าน' : 'Real-time sync from backend inventory'}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowLowStockModal(false)}
+                  className="h-9 px-4 rounded-full text-xs font-bold text-cream/80 hover:bg-cream/10 transition"
+                >
+                  {lang === 'th' ? 'ปิด' : 'Close'}
+                </button>
+                <Link
+                  to="/admin"
+                  onClick={() => setShowLowStockModal(false)}
+                  className="h-9 px-4 rounded-full bg-cream text-forest text-xs font-bold hover:bg-white transition active:scale-95"
+                >
+                  {lang === 'th' ? 'เปิดระบบจัดการคลัง (Admin)' : 'Open Admin Inventory'}
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -47,6 +47,7 @@ import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryManager from '../components/InventoryManager';
 import RevenueOverviewChart from '../components/RevenueOverviewChart';
 import SeasonalRotationsManager from '../components/SeasonalRotationsManager';
+import SmoothScrollMenu from '../components/SmoothScrollMenu';
 import { useAccessibility } from '../contexts/AccessibilityContext';
 
 type Tab =
@@ -278,39 +279,41 @@ export default function Admin() {
           </div>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="mx-auto max-w-6xl px-4 pb-2.5 overflow-x-auto no-scrollbar">
-          <div className="inline-flex rounded-full liquid-dock p-1 gap-1">
-            {(
-              [
-                ['products', t.products, Package],
+        {/* Tab Switcher: Effortless smooth scrolling with navigation buttons & edge fade */}
+        <div className="mx-auto max-w-6xl px-3 sm:px-4 pb-2.5">
+          <SmoothScrollMenu arrowTheme="forest">
+            <div className="inline-flex rounded-full liquid-dock p-1 gap-1">
+              {(
                 [
-                  'seasonal',
-                  lang === 'th' ? 'รสชาติเฉพาะฤดูกาล' : 'Seasonal Rotations',
-                  Sparkles,
-                ],
-                ['inventory', lang === 'th' ? 'คลังสต็อก (Inventory)' : 'Inventory', Boxes],
-                ['orders', t.orders, ClipboardList],
-                ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
-                ['haptics', lang === 'th' ? 'การสั่นแป้น POS (Haptics)' : 'POS Haptics', Activity],
-                ['settings', lang === 'th' ? 'ตั้งค่าร้าน & ข้อมูล' : 'Shop Settings', Store],
-                ['database', lang === 'th' ? 'ฐานข้อมูล Firestore' : 'Firestore Database', Database],
-                ['emails', lang === 'th' ? 'อีเมลอัตโนมัติ' : 'Automated Emails', Mail],
-              ] as const
-            ).map(([k, l, Ic]) => (
-              <button
-                key={k}
-                onClick={() => setTab(k)}
-                className={`h-9 px-4 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
-                  tab === k
-                    ? 'bg-forest text-cream shadow-sm'
-                    : 'text-forest hover:bg-forest/10'
-                }`}
-              >
-                <Ic className="h-3.5 w-3.5" /> {l}
-              </button>
-            ))}
-          </div>
+                  ['products', t.products, Package],
+                  [
+                    'seasonal',
+                    lang === 'th' ? 'รสชาติเฉพาะฤดูกาล' : 'Seasonal Rotations',
+                    Sparkles,
+                  ],
+                  ['inventory', lang === 'th' ? 'คลังสต็อก (Inventory)' : 'Inventory', Boxes],
+                  ['orders', t.orders, ClipboardList],
+                  ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
+                  ['haptics', lang === 'th' ? 'การสั่นแป้น POS (Haptics)' : 'POS Haptics', Activity],
+                  ['settings', lang === 'th' ? 'ตั้งค่าร้าน & ข้อมูล' : 'Shop Settings', Store],
+                  ['database', lang === 'th' ? 'ฐานข้อมูล Firestore' : 'Firestore Database', Database],
+                  ['emails', lang === 'th' ? 'อีเมลอัตโนมัติ' : 'Automated Emails', Mail],
+                ] as const
+              ).map(([k, l, Ic]) => (
+                <button
+                  key={k}
+                  onClick={() => setTab(k)}
+                  className={`h-9 px-4 rounded-full text-xs font-bold flex items-center gap-1.5 whitespace-nowrap transition-all ${
+                    tab === k
+                      ? 'bg-forest text-cream shadow-sm'
+                      : 'text-forest hover:bg-forest/10'
+                  }`}
+                >
+                  <Ic className="h-3.5 w-3.5" /> {l}
+                </button>
+              ))}
+            </div>
+          </SmoothScrollMenu>
         </div>
       </header>
 

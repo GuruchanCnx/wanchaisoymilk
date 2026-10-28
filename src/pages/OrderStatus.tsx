@@ -33,6 +33,7 @@ import { useToast } from '../contexts/ToastContext';
 import { downloadOrderReceiptPdf, printOrderReceipt } from '../lib/pdf-receipt';
 import UserProfileModal from '../components/UserProfileModal';
 import OrderProgressNotification from '../components/OrderProgressNotification';
+import OrderPickupQRCode from '../components/OrderPickupQRCode';
 import AccessibilitySettings from '../components/AccessibilitySettings';
 import {
   db,
@@ -572,6 +573,9 @@ export default function OrderStatus() {
             </div>
           </div>
         )}
+
+        {/* Contactless Order Pickup QR Code Generator (Scan directly from screen) */}
+        <OrderPickupQRCode order={order} />
 
         {/* Dynamic 'Track My Order' Status Progress Card - iOS 27 Liquid Glass Style */}
         <div className="rounded-3xl liquid-glass-dark text-cream p-6 relative overflow-hidden liquid-specular shadow-2xl">
