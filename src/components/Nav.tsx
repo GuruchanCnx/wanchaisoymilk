@@ -40,6 +40,7 @@ import UserProfileModal from './UserProfileModal';
 import AccessibilitySettingsMenu from './AccessibilitySettingsMenu';
 import AccessibilitySettings from './AccessibilitySettings';
 import NavAccessibilityMenu from './NavAccessibilityMenu';
+import CartDrawer from './CartDrawer';
 
 export default function Nav({
   scrollTargets,
@@ -61,6 +62,7 @@ export default function Nav({
   const [showQrModal, setShowQrModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showAccessibilityMenu, setShowAccessibilityMenu] = useState(false);
+  const [isCartDrawerOpen, setIsCartDrawerOpen] = useState(false);
   const [isCartShaking, setIsCartShaking] = useState(false);
   const [points, setPoints] = useState(() => getLoyaltyProfile().availablePoints);
 
@@ -177,8 +179,8 @@ export default function Nav({
             {/* Accessibility Menu: Elder Mode & High Contrast toggles */}
             <NavAccessibilityMenu />
 
-            {/* Language Switcher - Compact */}
-            <div className="hidden sm:block shrink-0">
+            {/* Language Switcher - Compact (Bilingual switcher visible on mobile, tablet, and desktop) */}
+            <div className="shrink-0 flex items-center">
               <LanguageToggle compact instanceId="nav-top-bar" />
             </div>
 
@@ -209,11 +211,14 @@ export default function Nav({
               </button>
             </div>
 
-            {/* Signature Right Action Capsule Pill (Cart & Checkout) - Always guaranteed full width */}
-            <Link
-              to="/checkout"
-              onClick={() => triggerHaptic('medium')}
-              className={`relative h-8.5 sm:h-9 px-3 sm:px-3.5 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition shrink-0 whitespace-nowrap min-w-fit ${
+            {/* Signature Right Action Capsule Pill (Cart Drawer & Checkout) - Always guaranteed full width */}
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic('medium');
+                setIsCartDrawerOpen(true);
+              }}
+              className={`relative h-8.5 sm:h-9 px-3 sm:px-3.5 rounded-full bg-forest text-cream flex items-center gap-1.5 shadow-sm hover:bg-forest-dark active:scale-95 transition shrink-0 whitespace-nowrap min-w-fit cursor-pointer ${
                 isCartShaking ? 'animate-cart-shake ring-2 ring-terracotta' : ''
               }`}
               aria-label={t.cart}
@@ -249,7 +254,7 @@ export default function Nav({
                   {count}
                 </motion.span>
               )}
-            </Link>
+            </button>
 
             {/* Ergonomic Hamburger Navbar Toggle Button */}
             <button
@@ -723,6 +728,7 @@ export default function Nav({
         isOpen={showAccessibilityMenu}
         onClose={() => setShowAccessibilityMenu(false)}
       />
+      <CartDrawer isOpen={isCartDrawerOpen} onClose={() => setIsCartDrawerOpen(false)} />
       <MenuQrModal isOpen={showQrModal} onClose={() => setShowQrModal(false)} />
       <UserProfileModal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)} />
     </>

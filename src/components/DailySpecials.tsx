@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Sparkles, Plus, Clock, Flame, Check, AlertCircle } from 'lucide-react';
+import { Sparkles, Plus, Clock, Flame, Check, AlertCircle, Edit3 } from 'lucide-react';
 import { collection, onSnapshot, getDocs, setDoc, doc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useLang } from '../contexts/LanguageContext';
@@ -104,6 +105,14 @@ export default function DailySpecials({
   const [specials, setSpecials] = useState<DailySpecialItem[]>(DEFAULT_SPECIALS);
   const [loading, setLoading] = useState(true);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('wanchai_admin_user');
+      setIsAdmin(!!stored);
+    } catch {}
+  }, []);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -222,9 +231,22 @@ export default function DailySpecials({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 text-xs font-medium text-forest/70 self-start sm:self-auto">
-          <Clock className="h-3.5 w-3.5 text-terracotta" />
-          <span>{lang === 'th' ? 'ผลัดเปลี่ยนสูตรทุกวัน' : 'Rotated every morning'}</span>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          {isAdmin && (
+            <Link
+              to="/admin?tab=seasonal"
+              className="h-8 px-3 rounded-full bg-forest text-cream text-xs font-bold flex items-center gap-1.5 hover:bg-forest-dark transition active:scale-95 shadow-xs"
+              title={lang === 'th' ? 'แก้ไขรสชาติเฉพาะฤดูกาลในแอดมิน' : 'Edit Seasonal Rotations in Admin'}
+            >
+              <Edit3 className="h-3.5 w-3.5 text-honey" />
+              <span>{lang === 'th' ? 'แก้ไขเมนูฤดูกาล' : 'Edit Specials'}</span>
+            </Link>
+          )}
+
+          <div className="flex items-center gap-2 text-xs font-medium text-forest/70">
+            <Clock className="h-3.5 w-3.5 text-terracotta" />
+            <span>{lang === 'th' ? 'ผลัดเปลี่ยนสูตรทุกวัน' : 'Rotated every morning'}</span>
+          </div>
         </div>
       </div>
 

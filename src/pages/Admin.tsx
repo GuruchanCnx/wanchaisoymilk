@@ -31,6 +31,8 @@ import {
   BarChart3,
   LogOut,
   Boxes,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import type { Product, Order } from '../types';
 import { useLang } from '../contexts/LanguageContext';
@@ -44,9 +46,19 @@ import HapticConfigPanel from '../components/HapticConfigPanel';
 import SalesAnalytics from '../components/SalesAnalytics';
 import InventoryManager from '../components/InventoryManager';
 import RevenueOverviewChart from '../components/RevenueOverviewChart';
+import SeasonalRotationsManager from '../components/SeasonalRotationsManager';
 import { useAccessibility } from '../contexts/AccessibilityContext';
 
-type Tab = 'products' | 'inventory' | 'orders' | 'analytics' | 'haptics' | 'settings' | 'database' | 'emails';
+type Tab =
+  | 'products'
+  | 'seasonal'
+  | 'inventory'
+  | 'orders'
+  | 'analytics'
+  | 'haptics'
+  | 'settings'
+  | 'database'
+  | 'emails';
 
 export default function Admin() {
   const { t, lang } = useLang();
@@ -72,7 +84,29 @@ export default function Admin() {
   const [email, setEmail] = useState('banheruka@gmail.com');
   const [password, setPassword] = useState('wanchai2026');
   const [err, setErr] = useState('');
-  const [tab, setTab] = useState<Tab>('products');
+  const [tab, setTab] = useState<Tab>(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const requested = params.get('tab') as Tab;
+      if (
+        requested &&
+        [
+          'products',
+          'seasonal',
+          'inventory',
+          'orders',
+          'analytics',
+          'haptics',
+          'settings',
+          'database',
+          'emails',
+        ].includes(requested)
+      ) {
+        return requested;
+      }
+    } catch {}
+    return 'products';
+  });
 
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,6 +284,11 @@ export default function Admin() {
             {(
               [
                 ['products', t.products, Package],
+                [
+                  'seasonal',
+                  lang === 'th' ? 'รสชาติเฉพาะฤดูกาล' : 'Seasonal Rotations',
+                  Sparkles,
+                ],
                 ['inventory', lang === 'th' ? 'คลังสต็อก (Inventory)' : 'Inventory', Boxes],
                 ['orders', t.orders, ClipboardList],
                 ['analytics', lang === 'th' ? 'สถิติยอดขาย (Charts)' : 'Sales & Charts', TrendingUp],
@@ -293,6 +332,15 @@ export default function Admin() {
               <span>{lang === 'th' ? 'เปิดเครื่องคิดเงิน POS หน้าร้าน' : 'Launch POS Terminal'}</span>
             </Link>
 
+            <button
+              type="button"
+              onClick={() => setTab('seasonal')}
+              className="h-9 px-3.5 rounded-full bg-honey text-forest font-bold text-xs flex items-center gap-1.5 shadow hover:bg-honey-dark transition active:scale-95"
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>{lang === 'th' ? 'จัดการรสชาติเฉพาะฤดูกาล' : 'Edit Seasonal Rotations'}</span>
+            </button>
+
             <a
               href="https://www.google.com/maps/dir/?api=1&destination=18.779833,98.984472"
               target="_blank"
@@ -321,7 +369,8 @@ export default function Admin() {
           </div>
         )}
 
-        {tab === 'products' && <ProductsTab />}
+        {tab === 'products' && <ProductsTab onOpenSeasonal={() => setTab('seasonal')} />}
+        {tab === 'seasonal' && <SeasonalRotationsManager />}
         {tab === 'inventory' && <InventoryManager />}
         {tab === 'orders' && <OrdersTab />}
         {tab === 'analytics' && <SalesAnalytics />}
@@ -334,7 +383,7 @@ export default function Admin() {
   );
 }
 
-function ProductsTab() {
+function ProductsTab({ onOpenSeasonal }: { onOpenSeasonal?: () => void }) {
   const { t, lang } = useLang();
   const [products, setProducts] = useState<Product[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -378,6 +427,41 @@ function ProductsTab() {
 
   return (
     <>
+      {/* Seasonal Rotations Quick Access Banner */}
+      <div className="mb-4 p-4 rounded-3xl bg-gradient-to-r from-amber-50 to-cream border border-amber-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 rounded-2xl bg-honey text-forest flex items-center justify-center shrink-0 shadow-xs">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h4 className="font-display italic font-bold text-forest text-base leading-none">
+                {lang === 'th' ? 'รสชาติเฉพาะฤดูกาล (Seasonal Rotations)' : 'Seasonal Rotations'}
+              </h4>
+              <span className="px-2 py-0.5 rounded-full bg-forest text-cream text-[10px] font-mono font-bold">
+                Daily Specials
+              </span>
+            </div>
+            <p className="text-xs text-ink-muted mt-0.5">
+              {lang === 'th'
+                ? 'แก้ไขเมนูหมุนเวียน พร้อมฟังก์ชันอัปโหลดรูปภาพและ Rich Text Editor'
+                : 'Edit small-batch daily creations with photo upload and rich text editing'}
+            </p>
+          </div>
+        </div>
+
+        {onOpenSeasonal && (
+          <button
+            type="button"
+            onClick={onOpenSeasonal}
+            className="h-9 px-4 rounded-full bg-forest text-cream text-xs font-bold hover:bg-forest-dark transition flex items-center justify-center gap-1.5 shrink-0 shadow-xs active:scale-95"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-honey" />
+            <span>{lang === 'th' ? 'แก้ไขรสชาติประจำฤดู' : 'Edit Seasonal Specials'}</span>
+          </button>
+        )}
+      </div>
+
       <div className="flex items-center gap-2 mb-4">
         <div className="flex-1 relative">
           <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
@@ -847,8 +931,90 @@ function F({ label, children }: { label: string; children: React.ReactNode }) {
   );
 }
 
+/**
+ * Maps the current order history state into a standard CSV string format.
+ */
+export function mapOrderHistoryToCsv(ordersList: Order[]): string {
+  const headers = [
+    'Order ID',
+    'Date',
+    'Time',
+    'Customer Name',
+    'Phone',
+    'Email',
+    'Status',
+    'Payment Status',
+    'Payment Method',
+    'Total THB',
+    'Pickup Time',
+    'Items Summary',
+    'Special Requests & Allergies',
+  ];
+
+  const escapeCsv = (val: string | number | undefined | null) => {
+    if (val === undefined || val === null) return '""';
+    const str = String(val).replace(/"/g, '""');
+    return `"${str}"`;
+  };
+
+  const rows = ordersList.map((o) => {
+    const createdDate = o.created_at ? new Date(o.created_at) : new Date();
+    const dateStr = createdDate.toISOString().slice(0, 10);
+    const timeStr = createdDate.toLocaleTimeString('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+
+    const itemsSummary = (o.items || [])
+      .map(
+        (i) =>
+          `${i.qty}x ${i.name_th || i.name_en} (${i.vessel}/${i.sweetness}${
+            i.temp ? `/${i.temp}` : ''
+          })`
+      )
+      .join('; ');
+
+    return [
+      escapeCsv(o.id),
+      escapeCsv(dateStr),
+      escapeCsv(timeStr),
+      escapeCsv(o.customer_name || 'Walk-in'),
+      escapeCsv(o.phone || ''),
+      escapeCsv(o.email || (o as any).customer_email || ''),
+      escapeCsv(o.status),
+      escapeCsv(o.payment_status || o.status),
+      escapeCsv(o.payment_method || 'cash'),
+      escapeCsv(o.total),
+      escapeCsv(o.pickup_time || 'ASAP'),
+      escapeCsv(itemsSummary),
+      escapeCsv(o.notes || ''),
+    ].join(',');
+  });
+
+  // Prepend UTF-8 BOM (\uFEFF) so Microsoft Excel & Numbers display Thai characters cleanly
+  return '\uFEFF' + [headers.join(','), ...rows].join('\r\n');
+}
+
+/**
+ * Triggers a browser download of a CSV string file for the store owner.
+ */
+export function triggerCsvDownload(csvString: string, filename?: string): void {
+  const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  const today = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = filename || `wanchai_orders_${today}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
 function OrdersTab() {
   const { t, lang } = useLang();
+  const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<'active' | 'all'>('active');
 
@@ -875,6 +1041,30 @@ function OrdersTab() {
     load();
   };
 
+  const handleExportToCsv = () => {
+    triggerHaptic('medium');
+    if (!orders || orders.length === 0) {
+      showToast(
+        lang === 'th' ? 'ไม่มีข้อมูลออเดอร์สำหรับส่งออก' : 'No orders to export',
+        lang === 'th' ? 'ยังไม่มีรายการออเดอร์ในระบบ' : 'No order records available yet',
+        'info'
+      );
+      return;
+    }
+
+    const csvContent = mapOrderHistoryToCsv(orders);
+    const today = new Date().toISOString().slice(0, 10);
+    triggerCsvDownload(csvContent, `wanchai_orders_${today}.csv`);
+
+    showToast(
+      lang === 'th' ? 'ส่งออกไฟล์ CSV สำเร็จ' : 'Orders Exported to CSV',
+      lang === 'th'
+        ? `ส่งออกข้อมูลรายการสั่งซื้อ ${orders.length} ออเดอร์เรียบร้อยแล้ว`
+        : `Exported ${orders.length} orders successfully for offline analysis`,
+      'success'
+    );
+  };
+
   const list =
     filter === 'active'
       ? orders.filter((o) => !['done', 'cancelled'].includes(o.status))
@@ -882,20 +1072,38 @@ function OrdersTab() {
 
   return (
     <>
-      <div className="inline-flex rounded-full liquid-dock p-1 mb-4">
-        {(['active', 'all'] as const).map((k) => (
-          <button
-            key={k}
-            onClick={() => setFilter(k)}
-            className={`h-9 px-4 rounded-full text-xs font-bold transition ${
-              filter === k ? 'bg-forest text-cream shadow-sm' : 'text-forest hover:bg-forest/10'
-            }`}
-          >
-            {k === 'active'
-              ? (lang === 'th' ? 'ที่กำลังทำ' : 'Active')
-              : (lang === 'th' ? 'ทั้งหมด' : 'All')}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="inline-flex rounded-full liquid-dock p-1">
+          {(['active', 'all'] as const).map((k) => (
+            <button
+              key={k}
+              onClick={() => setFilter(k)}
+              className={`h-9 px-4 rounded-full text-xs font-bold transition ${
+                filter === k ? 'bg-forest text-cream shadow-sm' : 'text-forest hover:bg-forest/10'
+              }`}
+            >
+              {k === 'active'
+                ? lang === 'th'
+                  ? `ที่กำลังทำ (${orders.filter((o) => !['done', 'cancelled'].includes(o.status)).length})`
+                  : `Active (${orders.filter((o) => !['done', 'cancelled'].includes(o.status)).length})`
+                : lang === 'th'
+                ? `ทั้งหมด (${orders.length})`
+                : `All (${orders.length})`}
+            </button>
+          ))}
+        </div>
+
+        {/* Export to CSV Action Button */}
+        <button
+          type="button"
+          onClick={handleExportToCsv}
+          className="h-9 px-4 rounded-full liquid-pill text-forest hover:bg-forest hover:text-cream text-xs font-bold flex items-center gap-1.5 transition active:scale-95 border border-forest/20 shadow-2xs group"
+          title="Export order history to CSV for store owner analysis"
+          aria-label="Export to CSV"
+        >
+          <Download className="h-3.5 w-3.5 text-forest group-hover:text-cream transition-colors" />
+          <span>Export to CSV</span>
+        </button>
       </div>
 
       <div className="space-y-3.5">

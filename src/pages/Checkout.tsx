@@ -10,10 +10,11 @@ import { baht, shortId } from '../lib/format';
 import LanguageToggle from '../components/LanguageToggle';
 import PromptPayQR from '../components/PromptPayQR';
 import OrderSummaryModal from '../components/OrderSummaryModal';
+import { playSuccessChime } from '../lib/sound';
 
 export default function Checkout() {
   const { t, lang } = useLang();
-  const { items, updateQty, remove, subtotal, clear } = useCart();
+  const { items, updateQty, remove, subtotal, clear, specialInstructions } = useCart();
   const { showToast } = useToast();
   const nav = useNavigate();
 
@@ -23,7 +24,7 @@ export default function Checkout() {
   const [pickup, setPickup] = useState('asap');
   const [pickupCustom, setPickupCustom] = useState('');
   const [pay, setPay] = useState<'promptpay' | 'cash'>('promptpay');
-  const [notes, setNotes] = useState('');
+  const [notes, setNotes] = useState(() => specialInstructions || localStorage.getItem('wanjai_cart_notes') || '');
   const [placing, setPlacing] = useState(false);
   const [placed, setPlaced] = useState<{ id: number; localId?: string } | null>(null);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
@@ -79,8 +80,9 @@ export default function Checkout() {
       if (!res.ok) throw new Error('Order failed');
       const order = await res.json();
       
-      // Tactile celebration + toast confirmation
+      // Tactile celebration + acoustic chime + toast confirmation
       triggerHaptic('success');
+      playSuccessChime();
       showToast(
         lang === 'th' ? `ส่งคำสั่งซื้อสำเร็จ! ออเดอร์ #${order.id}` : `Order Placed! #${order.id}`,
         lang === 'th' ? 'กำลังนำท่านไปยังหน้าระบบติดตามสถานะออเดอร์...' : 'Redirecting to real-time tracking...',
@@ -207,8 +209,13 @@ export default function Checkout() {
               <input type="time" value={pickup !== 'asap' && pickup !== '15' && pickup !== '30' ? pickup : ''} onChange={(e) => { setPickup(e.target.value); setPickupCustom(e.target.value); }} className="h-11 px-3 rounded-full border-2 border-forest/15 bg-cream-soft font-mono text-sm" />
             </div>
           </Field>
-          <Field label={t.notes}>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={lang === 'th' ? 'เช่น มาเองนะคะ ขอบคุณ' : 'e.g. picking up myself, thanks'} className="w-full h-12 rounded-xl border-2 border-forest/15 bg-cream-soft px-4 focus:outline-none focus:border-forest" />
+          <Field label={lang === 'th' ? 'ข้อมูลการแพ้อาหารหรือความต้องการพิเศษ (Special Requests & Allergies)' : 'Allergy Information & Special Requests'}>
+            <input
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={lang === 'th' ? 'เช่น แพ้ถั่วลิสง, ไม่หวานเลย, แยกน้ำแข็ง...' : 'e.g. Peanut allergy, completely unsweetened, ice on side...'}
+              className="w-full h-12 rounded-xl border-2 border-forest/15 bg-cream-soft px-4 focus:outline-none focus:border-forest text-sm font-thai"
+            />
           </Field>
         </Step>
 

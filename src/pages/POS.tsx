@@ -39,6 +39,13 @@ import {
   triggerHaptic,
 } from '../lib/haptics';
 import { useToast } from '../contexts/ToastContext';
+import {
+  playSuccessChime,
+  playClickCue,
+  playAlertCue,
+  isSoundEnabled,
+  setSoundEnabled,
+} from '../lib/sound';
 
 interface ActiveCartItem extends OrderItem {
   id: string;
@@ -49,7 +56,7 @@ export default function POS() {
   const { showToast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [sound, setSound] = useState(true);
+  const [sound, setSound] = useState(() => isSoundEnabled());
   const [lastCount, setLastCount] = useState(0);
   const [activeTab, setActiveTab] = useState<'register' | 'kitchen'>('register');
   const [showDialPad, setShowDialPad] = useState(false);
@@ -126,6 +133,7 @@ export default function POS() {
         'info'
       );
     } else if (patch.status === 'ready') {
+      playAlertCue();
       showToast(
         lang === 'th' ? `ออเดอร์ #${id} พร้อมรับแล้ว! ✨` : `Order #${id} is Ready! ✨`,
         lang === 'th' ? 'ส่งกระดิ่งและเสียงเตือนเรียกลูกค้า' : 'Customer alerted for pickup',
@@ -137,6 +145,7 @@ export default function POS() {
   // Register Handlers
   const addToCart = (product: Product) => {
     triggerHaptic('medium');
+    playClickCue();
     const existingIndex = cart.findIndex((item) => item.product_id === product.id);
 
     if (existingIndex > -1) {
@@ -165,6 +174,7 @@ export default function POS() {
 
   const updateCartQty = (id: string, delta: number) => {
     triggerHaptic('light');
+    playClickCue();
     setCart((prev) =>
       prev
         .map((item) => {
@@ -223,6 +233,7 @@ export default function POS() {
       if (res.ok) {
         const created = await res.json();
         triggerHaptic('success');
+        playSuccessChime();
         showToast(
           lang === 'th' ? `ลงบิลสำเร็จ #${created?.id || ''}` : `POS Order Saved #${created?.id || ''}`,
           lang === 'th' ? `ยอดรวม ${baht(cartSubtotal)} รับชำระเรียบร้อย` : `Total ${baht(cartSubtotal)} recorded`,
@@ -359,12 +370,17 @@ export default function POS() {
             </button>
 
             <button
-              onClick={() => setSound(!sound)}
-              title={sound ? 'Mute' : 'Unmute'}
+              onClick={() => {
+                const next = !sound;
+                setSound(next);
+                setSoundEnabled(next);
+                triggerHaptic('tap');
+              }}
+              title={sound ? (lang === 'th' ? 'ปิดเสียงแจ้งเตือน' : 'Mute Sound') : (lang === 'th' ? 'เปิดเสียงแจ้งเตือน' : 'Unmute Sound')}
               aria-label="Toggle Sound"
-              className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-full bg-forest-dark flex items-center justify-center hover:bg-forest-dark/80 transition shrink-0"
+              className="h-8.5 w-8.5 sm:h-10 sm:w-10 rounded-full bg-forest-dark flex items-center justify-center hover:bg-forest-dark/80 transition shrink-0 active:scale-95"
             >
-              {sound ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              {sound ? <Volume2 className="h-4 w-4 text-honey" /> : <VolumeX className="h-4 w-4 opacity-50" />}
             </button>
 
             <LanguageToggle compact theme="dark" instanceId="pos-top-bar" />

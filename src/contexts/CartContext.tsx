@@ -27,6 +27,8 @@ type Ctx = {
   subtotal: number;
   count: number;
   bumpKey: number;
+  specialInstructions: string;
+  setSpecialInstructions: (notes: string) => void;
 };
 
 const CartContext = createContext<Ctx>({
@@ -38,6 +40,8 @@ const CartContext = createContext<Ctx>({
   subtotal: 0,
   count: 0,
   bumpKey: 0,
+  specialInstructions: '',
+  setSpecialInstructions: () => {},
 });
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -45,11 +49,22 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try { return JSON.parse(localStorage.getItem('cart') || '[]'); } catch { return []; }
   });
   const [bumpKey, setBumpKey] = useState<number>(0);
+  const [specialInstructions, setSpecialInstructionsState] = useState<string>(() => {
+    try { return localStorage.getItem('wanjai_cart_notes') || ''; } catch { return ''; }
+  });
 
   useEffect(() => { localStorage.setItem('cart', JSON.stringify(items)); }, [items]);
 
+  const setSpecialInstructions = (notes: string) => {
+    setSpecialInstructionsState(notes);
+    try { localStorage.setItem('wanjai_cart_notes', notes); } catch {}
+  };
+
   const add = (item: CartItem) => {
     triggerHaptic('medium');
+    try {
+      import('../lib/sound').then((s) => s.playClickCue());
+    } catch {}
     setItems((prev) => {
       // merge identical lines
       const existing = prev.find(
@@ -80,12 +95,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clear = () => {
     triggerHaptic('medium');
     setItems([]);
+    setSpecialInstructions('');
   };
   const subtotal = items.reduce((s, i) => s + i.unit_price * i.qty, 0);
   const count = items.reduce((s, i) => s + i.qty, 0);
 
   return (
-    <CartContext.Provider value={{ items, add, updateQty, remove, clear, subtotal, count, bumpKey }}>
+    <CartContext.Provider
+      value={{
+        items,
+        add,
+        updateQty,
+        remove,
+        clear,
+        subtotal,
+        count,
+        bumpKey,
+        specialInstructions,
+        setSpecialInstructions,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );
